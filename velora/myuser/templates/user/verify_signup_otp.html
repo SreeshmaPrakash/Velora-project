@@ -1,0 +1,134 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="otp-verification-container">
+        <h2>Enter OTP</h2>
+        <p class="subtitle">A 4-digit OTP has been sent to your email</p>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'verify_signup_otp' %}">
+            {% csrf_token %}
+            <div class="otp-input-container">
+                <input type="text" 
+                       name="otp" 
+                       maxlength="4" 
+                       pattern="\d{4}" 
+                       required 
+                       class="form-control otp-input"
+                       placeholder="Enter 4-digit OTP">
+            </div>
+            <button type="submit" class="btn btn-primary verify-btn">Verify OTP</button>
+        </form>
+
+        <div class="resend-container">
+            <p class="timer" id="timer">Resend OTP in <span id="countdown">30</span>s</p>
+            <form method="POST" action="{% url 'resend_otp' %}" id="resendForm">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="btn btn-link resend-btn" 
+                        id="resendButton" 
+                        disabled>
+                    Resend OTP
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.otp-verification-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.otp-input {
+    font-size: 1.2rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+}
+
+.verify-btn {
+    width: 100%;
+    margin-top: 1rem;
+    background-color: #800080;
+    border: none;
+}
+
+.verify-btn:hover {
+    background-color: #660066;
+}
+
+.resend-container {
+    margin-top: 1.5rem;
+}
+
+.timer {
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.resend-btn {
+    color: #800080;
+    text-decoration: none;
+}
+
+.resend-btn:disabled {
+    color: #999;
+    cursor: not-allowed;
+}
+
+.alert {
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let timeLeft = 30;
+    const timerDisplay = document.getElementById('countdown');
+    const resendButton = document.getElementById('resendButton');
+    const timerText = document.getElementById('timer');
+
+    function updateTimer() {
+        if (timeLeft > 0) {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+        } else {
+            clearInterval(timer);
+            timerText.style.display = 'none';
+            resendButton.disabled = false;
+        }
+    }
+
+    const timer = setInterval(updateTimer, 1000);
+
+    // Handle form submission
+    document.getElementById('resendForm').addEventListener('submit', function(e) {
+        resendButton.disabled = true;
+        timerText.style.display = 'block';
+        timeLeft = 30;
+        timer = setInterval(updateTimer, 1000);
+    });
+});
+</script>
+{% endblock %}

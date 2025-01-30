@@ -1,0 +1,476 @@
+{% extends 'user/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<!-- Hero Banner Section -->
+<div class="hero-banner">
+    <img src="/media/product_images/banners1.webp" alt="Banner" class="banner-img">
+    <div class="banner-content">
+        <h1>Discover Our Collection</h1>
+        <a href="{% url 'products' %}" class="shop-now-btn">Shop Now</a>
+    </div>
+</div>
+
+<!-- Best Sellers Section -->
+<section class="section-container">
+    <div class="section-header">
+        <h2>Best Sellers</h2>
+        <p>Our most popular products this season</p>
+    </div>
+
+    <div class="products-grid">
+        {% for product in products|slice:":8" %}
+        <div class="product-card">
+            <div class="product-image-wrapper">
+                {% with primary_image=product.product_images.filter.first %}
+                <img src="{{ primary_image.image.url }}" 
+                     alt="{{ primary_image.alt_text|default:product.name }}"
+                     class="product-image">
+                {% endwith %}
+                
+                <!-- Heart Wishlist Button -->
+                <button class="heart-wishlist {% if product.is_wishlisted %}active{% endif %}" 
+                        onclick="toggleWishlist({{ product.id }}, this)"
+                        title="Add to Wishlist">
+                    <i class="far fa-heart"></i>
+                </button>
+
+                {% if product.discount_percentage %}
+                <div class="discount-badge">
+                    <span>{{ product.discount_percentage }}% OFF</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="product-info">
+                <h3 class="product-title">{{ product.name }}</h3>
+                <div class="product-price">
+                    <span class="current-price">₹{{ product.price }}</span>
+                    {% if product.original_price %}
+                    <span class="original-price">₹{{ product.original_price }}</span>
+                    {% endif %}
+                </div>
+                <div class="product-meta">
+                    {% if product.stock > 0 %}
+                    <span class="stock-status in-stock">
+                        <i class="fas fa-check-circle"></i> In Stock
+                    </span>
+                    {% else %}
+                    <span class="stock-status out-of-stock">
+                        <i class="fas fa-times-circle"></i> Out of Stock
+                    </span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'product_detail' product.id %}" class="view-details-btn">View Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Featured Products -->
+<section class="section-container">
+    <div class="section-header">
+        <h2>Featured Products</h2>
+        <p>Handpicked selections just for you</p>
+    </div>
+
+    <div class="products-grid">
+        {% for product in featured_products %}
+        <div class="product-card">
+            <div class="product-image-wrapper">
+                {% with primary_image=product.product_images.filter.first %}
+                <img src="{{ primary_image.image.url }}" 
+                     alt="{{ primary_image.alt_text|default:product.name }}"
+                     class="product-image">
+                {% endwith %}
+                
+                <!-- Heart Wishlist Button -->
+                <button class="heart-wishlist {% if product.is_wishlisted %}active{% endif %}" 
+                        onclick="toggleWishlist({{ product.id }}, this)"
+                        title="Add to Wishlist">
+                    <i class="far fa-heart"></i>
+                </button>
+
+                {% if product.discount_percentage %}
+                <div class="discount-badge">
+                    <span>{{ product.discount_percentage }}% OFF</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="product-info">
+                <h3 class="product-title">{{ product.name }}</h3>
+                <div class="product-price">
+                    <span class="current-price">₹{{ product.price }}</span>
+                    {% if product.original_price %}
+                    <span class="original-price">₹{{ product.original_price }}</span>
+                    {% endif %}
+                </div>
+                <div class="product-meta">
+                    {% if product.stock > 0 %}
+                    <span class="stock-status in-stock">
+                        <i class="fas fa-check-circle"></i> In Stock
+                    </span>
+                    {% else %}
+                    <span class="stock-status out-of-stock">
+                        <i class="fas fa-times-circle"></i> Out of Stock
+                    </span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'product_detail' product.id %}" class="view-details-btn">View Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+<style>
+/* Hero Banner */
+.hero-banner {
+    position: relative;
+    height: 500px;
+    overflow: hidden;
+    margin-bottom: 60px;
+}
+
+.banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.banner-content {
+    position: absolute;
+    top: 75%;
+    left: 50px;
+    transform: translateY(-50%);
+    color:rgb(117, 87, 117);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.banner-content h1 {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+}
+
+.shop-now-btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: #800080;
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.shop-now-btn:hover {
+    background: #660066;
+    transform: translateY(-2px);
+}
+
+/* Section Styling */
+.section-container {
+    padding: 60px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.section-header h2 {
+    color: #800080;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.section-header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+/* Products Grid */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+}
+
+/* Product Card */
+.product-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+}
+
+.product-image-wrapper {
+    position: relative;
+    padding-top: 100%;
+}
+
+.product-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+    transform: scale(1.1);
+}
+
+/* Product Info Styling */
+.product-info {
+    padding: 20px;
+}
+
+.product-title {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-price {
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.current-price {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #800080;
+}
+
+.original-price {
+    color: #999;
+    text-decoration: line-through;
+    font-size: 1rem;
+}
+
+.discount-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #ff4444;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 1;
+}
+
+/* Wishlist Button */
+.wishlist-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.wishlist-btn i {
+    color: #800080;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.wishlist-btn.active i {
+    color: #ff4444;
+}
+
+.wishlist-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Stock Status */
+.product-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.stock-status {
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.in-stock {
+    color: #28a745;
+}
+
+.out-of-stock {
+    color: #dc3545;
+}
+
+/* View Details Button */
+.view-details-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #800080;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.view-details-btn:hover {
+    background: #660066;
+    transform: translateY(-2px);
+}
+
+/* Categories Section */
+.categories-section {
+    background: #f8f9fa;
+    padding: 60px 20px;
+    margin: 60px 0;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.category-card {
+    position: relative;
+    height: 300px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.category-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.category-card:hover img {
+    transform: scale(1.1);
+}
+
+.category-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    color: white;
+}
+
+.category-content h3 {
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+.category-link {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.category-link:hover {
+    text-decoration: underline;
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease forwards;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .products-grid,
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .banner-content h1 {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-banner {
+        height: 400px;
+    }
+
+    .banner-content {
+        text-align: center;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+    }
+
+    .section-header h2 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .products-grid,
+    .categories-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-banner {
+        height: 300px;
+    }
+
+    .banner-content h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+
+{% endblock %}

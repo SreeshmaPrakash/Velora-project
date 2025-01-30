@@ -1,0 +1,57 @@
+{% extends "admin/adminbase.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Products</h1>
+    {% if messages %}
+          {% for message in messages %}
+           <div class="alert alert-danger">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+    <a href="{% url 'add_product' %}" class="btn btn-primary mb-3">Add Product</a>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description }}</td>
+                <td>{{ product.price }}</td>
+                <td>{{ product.stock }}</td>
+                <td>{{ product.category.name }}</td>
+                <td>
+                    <a href="{% url 'edit_product' product.id %}" class="btn btn-warning" style="width: 100%">Edit</a>
+                    <a href="{% url 'delete_product' product.id %}" class="btn btn-danger" style="width: 100%">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="pagination">
+        <span class="step-links">
+            {% if products.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ products.previous_page_number }}">previous</a>
+            {% endif %}
+            <span class="current">
+                Page {{ products.number }} of {{ products.paginator.num_pages }}.
+            </span>
+            {% if products.has_next %}
+                <a href="?page={{ products.next_page_number }}">next</a>
+                <a href="?page={{ products.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endblock %}

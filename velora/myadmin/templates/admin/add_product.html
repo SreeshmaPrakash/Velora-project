@@ -1,0 +1,366 @@
+{% extends 'admin/adminbase.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Add New Product</h2>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group mb-3">
+            <label for="{{ form.name.id_for_label }}">Product Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="text-danger">{{ form.name.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <div class="text-danger">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.price.id_for_label }}">Price</label>
+            {{ form.price }}
+            {% if form.price.errors %}
+            <div class="text-danger">{{ form.price.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="discount_price">Discount Price</label>
+            {{ form.discount_price }}
+            {% if form.discount_price.errors %}
+                <div class="text-danger">{{ form.discount_price.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.stock.id_for_label }}">Stock</label>
+            {{ form.stock }}
+            {% if form.stock.errors %}
+            <div class="text-danger">{{ form.stock.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.category.id_for_label }}">Category</label>
+            {{ form.category }}
+            {% if form.category.errors %}
+            <div class="text-danger">{{ form.category.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.is_active.id_for_label }}">Active</label>
+            {{ form.is_active }}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="{{ form.is_featured.id_for_label }}">Featured</label>
+            {{ form.is_featured }}
+        </div><div class="form-group mb-3">
+            <label for="{{ form.product_images.id_for_label }}">Product Images (Minimum 3 required)</label>
+            {{ form.product_images }}
+            {% if form.product_images.errors %}
+            <div class="text-danger">{{ form.product_images.errors }}</div>
+            {% endif %}
+            <small class="form-text text-muted">
+                Images will be cropped to square and resized to 800x800 pixels
+            </small>
+        </div>
+
+        <!-- ... rest of your form groups ... -->
+
+        <div class="image-preview mt-3" id="imagePreview"></div>
+        <div class="cropper-container" id="cropperContainer" style="display: none;">
+            <div class="cropper-wrapper">
+                <img id="cropperImage" src="">
+            </div>
+            <div class="cropper-controls mt-2">
+                <button type="button" class="btn btn-secondary" id="cancelCrop">Cancel</button>
+                <button type="button" class="btn btn-primary" id="applyCrop">Apply Crop</button>
+            </div>
+        </div>
+
+        
+</div>
+
+        <div class="image-preview mt-3" id="imagePreview"></div>
+
+        <button type="submit" class="btn btn-primary">Add Product</button>
+    </form>
+</div>
+
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .image-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .image-preview img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .image-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .image-preview img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* New styles for cropper */
+    .cropper-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .cropper-wrapper {
+        max-width: 90%;
+        max-height: 80vh;
+        background: #fff;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    .cropper-controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+    .preview-actions {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: flex;
+        gap: 5px;
+    }
+    .preview-item {
+        position: relative;
+    }
+    .remove-image {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(255, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<script>
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    if (this.files.length < 3) {
+        preview.innerHTML = '<div class="alert alert-warning">Please select at least 3 images</div>';
+        return;
+    }
+    
+    for(let file of this.files) {
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                div.appendChild(img);
+                preview.appendChild(div);
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+
+<script>
+let cropper;
+let processedFiles = new Map();
+let currentFileIndex;
+
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    processedFiles.clear();
+    
+    if (this.files.length < 3) {
+        preview.innerHTML = '<div class="alert alert-warning">Please select at least 3 images</div>';
+        return;
+    }
+    
+    Array.from(this.files).forEach((file, index) => {
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.dataset.index = index;
+                img.addEventListener('click', () => startCropping(img.src, index));
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-image';
+                removeBtn.innerHTML = '×';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    div.remove();
+                    processedFiles.delete(index);
+                    validateImageCount();
+                });
+                
+                div.appendChild(img);
+                div.appendChild(removeBtn);
+                preview.appendChild(div);
+                
+                // Start cropping for first image automatically
+                if (index === 0) {
+                    startCropping(e.target.result, index);
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+});
+
+function startCropping(imgSrc, index) {
+    currentFileIndex = index;
+    const container = document.getElementById('cropperContainer');
+    const cropperImage = document.getElementById('cropperImage');
+    
+    container.style.display = 'flex';
+    cropperImage.src = imgSrc;
+    
+    if (cropper) {
+        cropper.destroy();
+    }
+    
+    cropper = new Cropper(cropperImage, {
+        aspectRatio: 1,
+        viewMode: 2,
+        autoCropArea: 1,
+        responsive: true,
+        crop(event) {
+            // You can add preview here if needed
+        }
+    });
+}
+
+document.getElementById('applyCrop').addEventListener('click', () => {
+    if (cropper) {
+        cropper.getCroppedCanvas({
+            width: 800,
+            height: 800
+        }).toBlob((blob) => {
+            const file = new File([blob], `cropped_${currentFileIndex}.jpg`, {
+                type: 'image/jpeg'
+            });
+            processedFiles.set(currentFileIndex, file);
+            
+            // Update preview image
+            const img = document.querySelector(`img[data-index="${currentFileIndex}"]`);
+            img.src = URL.createObjectURL(blob);
+            
+            document.getElementById('cropperContainer').style.display = 'none';
+            validateImageCount();
+        }, 'image/jpeg', 0.9);
+    }
+});
+
+document.getElementById('cancelCrop').addEventListener('click', () => {
+    document.getElementById('cropperContainer').style.display = 'none';
+});
+
+function validateImageCount() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.disabled = processedFiles.size < 3;
+    
+    if (processedFiles.size < 3) {
+        const preview = document.getElementById('imagePreview');
+        if (!preview.querySelector('.alert')) {
+            const warning = document.createElement('div');
+            warning.className = 'alert alert-warning';
+            warning.textContent = 'Please process at least 3 images';
+            preview.insertBefore(warning, preview.firstChild);
+        }
+    }
+}
+
+// Handle form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    if (processedFiles.size < 3) {
+        e.preventDefault();
+        alert('Please process at least 3 images');
+        return;
+    }
+    
+    // Create a new FormData instance
+    const formData = new FormData(this);
+    
+    // Remove the original files
+    formData.delete('product_images');
+    
+    // Add processed files
+    processedFiles.forEach((file, index) => {
+        formData.append('product_images', file);
+    });
+});
+</script>
+{% endblock %}

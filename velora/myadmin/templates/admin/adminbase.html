@@ -1,0 +1,288 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.0.0/mdb.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .login-card {
+        background-color: #eec4e6;
+       
+    }
+    
+    .admin-navbar,footer{
+        background-color: #eec4e6;
+        color: black;
+    }
+    .navbar-brand {
+        color: black;
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        font-size: 2.5rem;
+        padding-left: 40px;
+    }
+    
+    
+    .sidebar {
+        height: 75vh;
+        background-color: #800080;
+        padding: 20px;
+        border-right: 1px solid #dee2e6;
+        /* border-right: 1px solid red; */
+    }
+    
+    .sidebar .nav-link {
+        color: #fff;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+        background-color: hsl(288, 77%, 81%);
+        color: white;
+    }
+    
+    
+    
+    /* dashboard card design*/
+    
+    .card_bg_color {
+        background-color: #800080;
+        color: white;
+    }
+    
+    /* Main content styling */
+    
+    .dash-head{
+        background-color: #800080;
+    }
+    
+    .table td,
+    .table th {
+        padding: 15px;
+    }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0 15px;
+        margin: 20px 0;
+        font-size: 1em;
+        width: 100%;
+    }
+    
+    .table thead th {
+        padding: 12px 15px;
+        background: #800080;
+        color: #fefeeb;
+        border-style: none;   
+    }
+    .table thead tr {
+        border-top-left-radius: 1rem;
+    }
+    
+    .table tbody tr {
+        background: #800080;
+        border-radius: 20px;
+        
+    }
+    
+    .table tbody tr td {
+        padding: 12px 15px;
+        text-align: left;
+        background: #800080;
+        color: #fefeeb;
+    }
+    .table-responsive {
+        max-height: 64vh; /* Adjust based on your layout */
+        overflow-y: auto; /* Enable vertical scrolling */
+    }
+    
+    /* adminproducts */
+    .btn-add-Category {
+       background-color: #f4c2a1 ; 
+       color: brown; 
+       border-radius: 20px; 
+       margin-right: 10px;
+    }
+    
+    
+    /*--------------------- Table in admin page --------------------------*/
+    
+    
+    
+    @media (max-width: 600px) {
+        .table thead {
+            display: none;
+        }
+    
+        .table,
+        .table tbody,
+        .table tr,
+        .table td {
+            display: block;
+            width: 100%;
+        }
+    
+        .table tr {
+            margin-bottom: 15px;
+        }
+    
+        .table td {
+            text-align: right;
+            padding-left: 50%;
+            position: relative;
+        }
+    
+        .table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0;
+            width: 50%;
+            padding-left: 15px;
+            font-weight: bold;
+            text-align: left;
+        }
+    }
+    /* Media query for screens below 992px */
+    @media (max-width: 992px) {
+        .dash-head {
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+    
+        /* Reduce button padding on smaller screens */
+        .btn {
+            padding: 8px 12px; 
+        }
+    
+        /* Mobile Navbar adjustments */
+        .mobile-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    
+        /* Show the offcanvas button (menu icon) on smaller screens */
+        .mobile-navbar .offcanvas-btn {
+            display: block;
+        }
+    
+        /* Hide the navbar content (buttons and search bar) on smaller screens */
+        .navbar-content {
+            display: none;
+        }
+    }
+    
+    /* Media query for screens 992px and above */
+    @media (min-width: 992px) {
+        /* Hide the offcanvas button (menu icon) on larger screens */
+        .mobile-navbar .offcanvas-btn {
+            display: none;
+        }
+    
+        /* Show the navbar content (buttons and search bar) on larger screens */
+        .navbar-content {
+            display: flex;
+        }
+    }
+</style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg admin-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <img src="{% static 'images/adminlogo.png' %}" alt="Velora Logo" style="height: 40px;">
+            </a>
+            <div class="d-flex">
+                <a class="nav-link" href="{% url 'adminlogout' %}">Logout <i class="bi bi-box-arrow-right"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4 flex-grow-1">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                {% if not request.resolver_match.url_name == 'checkAdmin' %}
+                {% if not request.resolver_match.url_name == 'edit_product' %}
+                {% if not request.resolver_match.url_name == 'add_product' %}
+                
+                <!-- Button to toggle sidebar on mobile -->
+                <button class="btn btn-primary d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" aria-controls="offcanvasSidebar">
+                    Menu
+                </button>
+    
+                <!-- Sidebar (off-canvas for mobile, inline for desktop) -->
+                <div class="col-md-2 d-none d-md-block sidebar d-flex flex-column rounded-top-3">
+                    <nav class="nav flex-column flex-grow-1 justify-content-around">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">dashboard</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'customers' %}active{% endif %}" href="{% url 'customers' %}">Customers</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}" href="{% url 'products' %}">Products</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'category' %}active{% endif %}" href="{% url 'category' %}">Category</a>
+                        <a class="nav-link">Orders</a>
+                        <a class="nav-link">Coupons</a>
+                        <a class="nav-link">Offers</a>
+                        <a class="nav-link">Requests</a>
+                    </nav>
+                </div>
+    
+                <!-- Off-canvas sidebar for mobile -->
+                <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
+                    <div class="offcanvas-header">
+                        <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Menu</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                        <nav class="nav flex-column">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">dashboard</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'customers' %}active{% endif %}" href="{% url 'customers' %}">Customers</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}" href="{% url 'products' %}">Products</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'category' %}active{% endif %}" href="{% url 'category' %}">Category</a>
+                            {% comment %} <a class="nav-link {% if request.resolver_match.url_name == 'adminOrders' %}active{% endif %}" href="{% url 'adminOrders' %}">Orders</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'adminCoupons'%} active {% endif %}" href="{% url 'adminCoupons' %}">Coupons</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'adminOffers' %}active{% endif %}" href="{% url 'adminOffers' %}">Offers</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'manage_requests' %}active{% endif %}" href="{% url 'manage_requests' %}">Requests</a>
+                        </nav> {% endcomment %}
+                    </div>
+                </div>
+    
+                {% endif %}
+                {% endif %}
+                {% endif %}
+    
+                <!-- Main Content -->
+                <div class="col-md-10">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3">
+        <div class="container text-center">
+            <span class="text-dark">© 2024 Velora Ventures Pvt Ltd</span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.0.0/mdb.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    
+
+</body>
+</html>

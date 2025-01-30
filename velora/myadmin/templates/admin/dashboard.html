@@ -1,0 +1,41 @@
+{% extends "admin/adminbase.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Admin Dashboard</h1>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Total Customers</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_customers }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Total Products</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_products }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">Total Categories</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_categories }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Total Images</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_images }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

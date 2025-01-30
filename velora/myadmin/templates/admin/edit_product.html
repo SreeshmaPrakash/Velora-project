@@ -1,0 +1,168 @@
+{% extends "admin/adminbase.html" %}
+
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card p-4" style="width: 50%; background-color: #800080; border: 1px solid #800080; border-radius: 10px;">
+        <h1 class="mb-4 text-center" style="color:rgb(241, 231, 241);">Edit Product</h1>
+        
+        {% if messages %}
+        <div class="messages mb-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="{{ form.name.id_for_label }}" style="color:rgb(241, 231, 241);">Product Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <div class="text-danger">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.description.id_for_label }}" style="color:rgb(241, 231, 241);">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <div class="text-danger">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.price.id_for_label }}" style="color:rgb(241, 231, 241);">Price</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                <div class="text-danger">{{ form.price.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group mb -3">
+                <label for="{{ form.discount_price.id_for_label }}" style="color:rgb(241, 231, 241);">Discount Price</label>
+                {{ form.discount_price }}
+                {% if form.discount_price.errors %}
+                    <div class="text-danger">{{ form.discount_price.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.stock.id_for_label }}" style="color:rgb(241, 231, 241);">Stock</label>
+                {{ form.stock }}
+                {% if form.stock.errors %}
+                <div class="text-danger">{{ form.stock.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.category.id_for_label }}" style="color:rgb(241, 231, 241);">Category</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <div class="text-danger">{{ form.category.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.product_images.id_for_label }}" style="color:rgb(241, 231, 241);">Product Images (Minimum 3 required)</label>
+                {{ form.product_images }}
+                {% if form.product_images.errors %}
+                <div class="text-danger">{{ form.product_images.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.is_active.id_for_label }}" style="color:rgb(241, 231, 241);">Active</label>
+                {{ form.is_active }}
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.is_featured.id_for_label }}" style="color:rgb(241, 231, 241);">Featured</label>
+                {{ form.is_featured }}
+            </div>
+
+            {% if product.product_images.all %}
+            <div class="current-images mb-3">
+                <label style="color:rgb(241, 231, 241);">Current Images:</label>
+                <div class="row">
+                    {% for image in product.product_images.all %}
+                    <div class="col-md-4 mb-2">
+                        <img src="{{ image.image.url }}" class="img-fluid" alt="{{ image.alt_text }}">
+                        {% if image.is_primary %}
+                        <span class="badge bg-primary">Primary</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="image-preview mt-3" id="imagePreview"></div>
+
+            <button type="submit" class="btn btn-light">Update Product</button>
+            <a href="{% url 'products' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        margin-bottom: 10px;
+    }
+    .text-danger {
+        color: #ffc107 !important;
+        font-size: 0.875rem;
+    }
+    .image-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+    .image-preview img {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 5px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form-control class to all form inputs
+    const inputs = document.querySelectorAll('input:not([type="checkbox"]), textarea, select');
+    inputs.forEach(input => {
+        input.classList.add('form-control');
+    });
+
+    // Image preview functionality
+    const imageInput = document.querySelector('input[type="file"]');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            if (this.files.length < 3) {
+                preview.innerHTML = '<div class="alert alert-warning" style="color: #ffc107;">Please select at least 3 images</div>';
+                return;
+            }
+            
+            for(let file of this.files) {
+                if(file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        div.appendChild(img);
+                        preview.appendChild(div);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

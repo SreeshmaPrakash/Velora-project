@@ -1,0 +1,27 @@
+{% extends "admin/adminbase.html" %}
+
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card p-4" style="width: 50%; background-color: #800080; border: 1px solid #800080; border-radius: 10px;">
+        <h1 class="mb-4 text-center" style="color: rgb(241, 231, 241);">Edit Category</h1>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group mb-3">
+                <label for="name" style="color: rgb(241, 231, 241);">Name:</label>
+                {{ form.name }}
+                <script>
+                    document.getElementById("id_name").classList.add("form-control");
+                </script>
+            </div>
+            <div class="form-group mb-3">
+                <label for="description" style="color: rgb(241, 231, 241);">Description:</label>
+                {{ form.description }}
+                <script>
+                    document.getElementById("id_description").classList.add("form-control");
+                </script>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" style="background-color:rgb(237, 116, 215); border-color: #800080;">Update Category</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "admin/adminbase.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Customers</h1>
+    {% if messages %}
+          {% for message in messages %}
+           <div class="alert alert-danger">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr>
+                <td>{{ customer.id }}</td>
+                <td>{{ customer.username }}</td>
+                <td>{{ customer.email }}</td>
+                <td>
+                    {% if customer.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-danger">Blocked</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if customer.is_active %}
+                    <a href="{% url 'block_customer' customer.id %}" class="btn btn-danger">Block</a>
+                    {% else %}
+                    <a href="{% url 'unblock_customer' customer.id %}" class="btn btn-success">Unblock</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="pagination">
+        <span class="step-links">
+            {% if customers.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ customers.previous_page_number }}">previous</a>
+            {% endif %}
+            <span class="current">
+                Page {{ customers.number }} of {{ customers.paginator.num_pages }}.
+            </span>
+            {% if customers.has_next %}
+                <a href="?page={{ customers.next_page_number }}">next</a>
+                <a href="?page={{ customers.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endblock %}
