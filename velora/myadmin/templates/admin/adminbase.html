@@ -228,7 +228,7 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'customers' %}active{% endif %}" href="{% url 'customers' %}">Customers</a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}" href="{% url 'products' %}">Products</a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'category' %}active{% endif %}" href="{% url 'category' %}">Category</a>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'orders' %}active{% endif %}" href="{% url 'orders' %}">Orders</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_orders' %}active{% endif %}" href="{% url 'admin_orders' %}">Orders</a>
                         <a class="nav-link">Coupons</a>
                         <a class="nav-link">Offers</a>
                         <a class="nav-link">Requests</a>

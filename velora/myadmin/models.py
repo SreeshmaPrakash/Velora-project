@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from PIL import Image
 from decimal import Decimal
+from django.utils import timezone  
+
 
 
 class Customer(models.Model):
@@ -135,32 +137,74 @@ class OrderStatus(models.TextChoices):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    order_number = models.CharField(max_length=20, unique=True, default='ORD000001')
-    payment_method = models.ForeignKey('PaymentMethod', on_delete=models.SET_NULL, null=True)
-    address = models.ForeignKey('Address', on_delete=models.SET_NULL, null=True)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING)
+    ORDER_STATUS = (
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('SHIPPED', 'Shipped'),
+        ('DELIVERED', 'Delivered'),
+        ('CANCELLED', 'Cancelled')
+    )
+
+    PAYMENT_METHODS = (
+        ('COD', 'Cash on Delivery'),
+        ('ONLINE', 'Online Payment')
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order_number = models.CharField(max_length=20, unique=True, blank=True)
+    shipping_address = models.TextField(default='')
+    shipping_city = models.CharField(max_length=100, default='')
+    shipping_state = models.CharField(max_length=100, default='')
+    shipping_pincode = models.CharField(max_length=10, default='')
+    shipping_phone = models.CharField(max_length=15, default='')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='COD')
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=40.00)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=ORDER_STATUS, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    notes = models.TextField(blank=True, null=True)
+
+    def generate_order_number(self):
+        date = timezone.now().strftime('%Y%m%d')
+        # Get the count of orders for today
+        count = Order.objects.filter(
+            created_at__date=timezone.now().date()
+        ).count()
+        # Generate order number with date and sequential number
+        return f'ORD{date}{str(count + 1).zfill(4)}'
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            # Keep trying until we get a unique order number
+            while True:
+                order_number = self.generate_order_number()
+                if not Order.objects.filter(order_number=order_number).exists():
+                    self.order_number = order_number
+                    break
+        
+        if not self.total:
+            self.total = self.subtotal + self.shipping_fee
+            
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Order {self.order_number} by {self.user.username}"
 
     class Meta:
         ordering = ['-created_at']
 
+class OrderItem(models.Model):
+    order = models.ForeignKey('Order', related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey('Products', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def get_total(self):
+        return self.quantity * self.price
+
     def __str__(self):
-        return f"Order #{self.order_number}"
-
-    def save(self, *args, **kwargs):
-        if not self.order_number or self.order_number == 'ORD000001':
-            last_order = Order.objects.order_by('-id').first()
-            if last_order and last_order.order_number != 'ORD000001':
-                last_number = int(last_order.order_number[3:])
-                self.order_number = f"ORD{str(last_number + 1).zfill(6)}"
-            else:
-                self.order_number = "ORD000001"
-        super().save(*args, **kwargs)
-
+        return f"{self.quantity}x {self.product.name}"
 
 # Wallet Transaction and Coupons
 class WalletTransaction(models.Model):
@@ -211,7 +255,7 @@ class CartItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  
     created_at = models.DateTimeField(auto_now_add=True)
-
+    updated_at = models.DateTimeField(auto_now=True) 
 
     def get_cost(self):
         return self.price * self.quantity
@@ -292,3 +336,17 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.full_name}'s address in {self.city}"
+    
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
+    old_status = models.CharField(max_length=50)
+    new_status = models.CharField(max_length=50)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class StockHistory(models.Model):
+    product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='stock_history')
+    old_stock = models.IntegerField()
+    new_stock = models.IntegerField()
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)

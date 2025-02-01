@@ -252,6 +252,33 @@ def category_products(request, category_id):
     return render(request, 'user/category_products.html', context)
 
 
+@login_required
+def profile(request):
+    context = {
+        'active_tab': 'profile',
+        'user': request.user,
+        'customer': request.user.customer  
+    }
+    return render(request, 'user/profile.html', context)
+
+@login_required
+def manage_addresses(request):
+    addresses = Address.objects.filter(user=request.user, is_deleted=False)
+    context = {
+        'active_tab': 'addresses',
+        'addresses': addresses
+    }
+    return render(request, 'user/profile.html', context)
+
+@login_required
+def my_orders(request):
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    context = {
+        'active_tab': 'orders',
+        'orders': orders
+    }
+    return render(request, 'user/profile.html', context)
+
 @never_cache
 @login_required(login_url='userlogin')
 def profile_view(request):
@@ -347,6 +374,100 @@ def edit_profile(request):
     }
     return render(request, 'user/edit_profile.html', context)
 
+
+
+@login_required(login_url='userlogin')
+def add_address(request):
+    if request.method == 'POST':
+        try:
+            address = Address(
+                user=request.user,
+                full_name=request.POST.get('full_name'),
+                phone=request.POST.get('phone'),
+                address_line1=request.POST.get('address_line1'),
+                address_line2=request.POST.get('address_line2'),
+                city=request.POST.get('city'),
+                state=request.POST.get('state'),
+                pincode=request.POST.get('pincode'),
+                is_default=request.POST.get('is_default') == 'on'
+            )
+            
+            if address.is_default:
+                # Remove default from other addresses
+                Address.objects.filter(user=request.user).update(is_default=False)
+            
+            address.save()
+            messages.success(request, 'Address added successfully!')
+        except Exception as e:
+            messages.error(request, f'Error adding address: {str(e)}')
+    return redirect('profile')
+
+
+@login_required(login_url='userlogin')
+def edit_address(request, address_id):
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    
+    if request.method == 'POST':
+        try:
+            address.full_name = request.POST.get('full_name')
+            address.phone = request.POST.get('phone')
+            address.address_line1 = request.POST.get('address_line1')
+            address.address_line2 = request.POST.get('address_line2')
+            address.city = request.POST.get('city')
+            address.state = request.POST.get('state')
+            address.pincode = request.POST.get('pincode')
+            
+            is_default = request.POST.get('is_default') == 'on'
+            if is_default:
+                Address.objects.filter(user=request.user).update(is_default=False)
+                address.is_default = True
+                
+            address.save()
+            messages.success(request, 'Address updated successfully!')
+            return redirect('profile')
+        except Exception as e:
+            messages.error(request, f'Error updating address: {str(e)}')
+            
+    return render(request, 'user/edit_address.html', {'address': address})
+
+
+
+@login_required(login_url='userlogin')
+def delete_address(request, address_id):
+    if request.method == 'POST':
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        address.is_deleted = True
+        address.save()
+        messages.success(request, 'Address deleted successfully!')
+    return redirect('profile')
+
+
+
+@login_required(login_url='userlogin')
+def set_default_address(request, address_id):
+    if request.method == 'POST':
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        Address.objects.filter(user=request.user).update(is_default=False)
+        address.is_default = True
+        address.save()
+        messages.success(request, 'Default address updated successfully!')
+    return redirect('profile')
+
+
+@login_required(login_url='userlogin')
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order_items = order.orderitem_set.all().select_related('product')
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'shipping_address': order.shipping_address,
+        'billing_address': order.billing_address,
+    }
+    return render(request, 'user/order_detail.html', context)
+
+
 @login_required(login_url='userlogin')
 def cancel_order(request, order_id):
     if request.method == 'POST':
@@ -360,39 +481,36 @@ def cancel_order(request, order_id):
     return redirect('profile')
 
 
-@login_required(login_url='userlogin')
-def set_default_address(request, address_id):
-    if request.method == 'POST':
-        address = get_object_or_404(Address, id=address_id, user=request.user)
-        # Remove default from other addresses
-        Address.objects.filter(user=request.user).update(is_default=False)
-        # Set new default
-        address.is_default = True
-        address.save()
-        messages.success(request, 'Default address updated successfully!')
-    return redirect('profile')
-
-
-@login_required(login_url='userlogin')
-def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    return render(request, 'user/order_detail.html', {'order': order})
-
-
-@login_required
+@login_required(login_url='userlogin') 
 def view_cart(request):
     try:
-        cart, created = Cart.objects.get_or_create(user=request.user)
-        cart_items = cart.items.select_related('product').all()  
+        cart = Cart.objects.get(user=request.user)
+        
+        # Properly prefetch product images
+        cart_items = CartItem.objects.filter(cart=cart)\
+            .select_related('product')\
+            .prefetch_related(
+                'product__product_images',
+                'product__images'
+            ).all()
         
         subtotal = sum(item.quantity * item.price for item in cart_items)
-        total = subtotal - cart.discount
+        total = subtotal - getattr(cart, 'discount', 0)
         
         context = {
             'cart_items': cart_items,
             'subtotal': subtotal,
-            'discount': cart.discount,
+            'discount': getattr(cart, 'discount', 0),
             'total': total
+        }
+        return render(request, 'user/cart.html', context)
+    except Cart.DoesNotExist:
+        cart = Cart.objects.create(user=request.user)
+        context = {
+            'cart_items': [],
+            'subtotal': 0,
+            'discount': 0,
+            'total': 0
         }
         return render(request, 'user/cart.html', context)
     except Exception as e:
@@ -400,125 +518,78 @@ def view_cart(request):
         return redirect('userhome')
 
 
-@login_required
+@login_required(login_url='userlogin') 
 def add_to_cart(request, product_id):
     if request.method == 'POST':
-        # Add logging to track function entry
-        print(f"Adding to cart - Product ID: {product_id}, User: {request.user.username}")
-        
         try:
             product = get_object_or_404(Products, id=product_id)
-            print(f"Product found: {product.name}, Stock: {product.stock}, Active: {product.is_active}")
+            quantity = int(request.POST.get('quantity', 1))
             
-            # Check if product is active and in stock
-            if not product.is_active:
-                message = 'This product is not available'
-                print(f"Error: {message}")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': message
-                }) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('product_detail', product_id=product_id)
-            
-            # Validate quantity with better error handling
-            try:
-                quantity = int(request.POST.get('quantity', 1))
-                print(f"Requested quantity: {quantity}")
-            except ValueError:
-                message = 'Invalid quantity provided'
-                print(f"Error: {message}")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': message
-                }) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('product_detail', product_id=product_id)
-            
+            # Validate quantity
             if quantity <= 0:
-                message = 'Quantity must be positive'
-                print(f"Error: {message}")
                 return JsonResponse({
                     'status': 'error',
-                    'message': message
-                }) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('product_detail', product_id=product_id)
-                
-            if quantity > product.stock:
-                message = 'Not enough stock available'
-                print(f"Error: {message} (Requested: {quantity}, Available: {product.stock})")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': message
-                }) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('product_detail', product_id=product_id)
-            
-            # Get or create cart with error handling
-            try:
-                cart, created = Cart.objects.get_or_create(user=request.user)
-                print(f"Cart {'created' if created else 'retrieved'} for user")
-            except Exception as e:
-                print(f"Error creating/getting cart: {str(e)}")
-                raise
-            
-            # Calculate correct price
-            current_price = product.discount_price if product.discount_price else product.price
-            print(f"Product price: {current_price}")
-            
-            try:
-                # Check if product already in cart
-                cart_item, item_created = CartItem.objects.get_or_create(
-                    cart=cart,
-                    product=product,
-                    defaults={
-                        'quantity': quantity,
-                        'price': current_price
-                    }
-                )
-                
-                if not item_created:
-                    # Update quantity and price
-                    cart_item.quantity += quantity
-                    cart_item.price = current_price
-                    cart_item.save()
-                
-                print(f"Cart item {'created' if item_created else 'updated'} - Quantity: {cart_item.quantity}")
-                
-                messages.success(request, 'Product added to cart successfully!')
-                
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    cart_count = cart.items.count()
-                    cart_total = sum(item.quantity * item.price for item in cart.items.all())
-                    print(f"Cart updated - Count: {cart_count}, Total: {cart_total}")
-                    
-                    return JsonResponse({
-                        'status': 'success',
-                        'message': 'Product added to cart successfully!',
-                        'cart_count': cart_count,
-                        'cart_total': cart_total
-                    })
-                    
-                return redirect('view_cart')
-                
-            except Exception as e:
-                print(f"Error handling cart item: {str(e)}")
-                raise
-                
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'status': 'error',
-                    'message': str(e)
+                    'message': 'Quantity must be positive'
                 })
-            messages.error(request, f'Error adding to cart: {str(e)}')
-            return redirect('product_detail', product_id=product_id)
+            
+            # Check maximum quantity limit (4 or stock)
+            max_allowed = min(4, product.stock)
+            if quantity > max_allowed:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Maximum quantity allowed is {max_allowed}'
+                })
+            
+            # Get or create cart
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            
+            # Check existing cart item
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                product=product,
+                defaults={
+                    'quantity': 0,
+                    'price': product.price
+                }
+            )
+            
+            # Check total quantity including existing items
+            new_total_quantity = cart_item.quantity + quantity
+            if new_total_quantity > max_allowed:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Cannot add more items. Maximum allowed is {max_allowed}'
+                })
+            
+            # Update cart item
+            cart_item.quantity = new_total_quantity
+            cart_item.price = product.price
+            cart_item.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Product added to cart successfully!',
+                'cart_count': cart.items.count(),
+                'cart_total': float(sum(item.quantity * item.price for item in cart.items.all()))
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
     
-    # Log non-POST requests
-    print(f"Non-POST request received: {request.method}")
-    return redirect('product_detail', product_id=product_id)
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
 
-    
-@login_required
+@login_required(login_url='userlogin') 
 def update_cart(request, item_id):
     if request.method == 'POST':
         try:
             cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-            quantity = int(request.POST.get('quantity', 0))
+            quantity = int(request.POST.get('quantity', 1))
             
             if quantity > 0:
                 if quantity > cart_item.product.stock:
@@ -561,7 +632,9 @@ def update_cart(request, item_id):
     
     return redirect('view_cart')
 
-@login_required
+
+
+@login_required(login_url='userlogin') 
 def remove_from_cart(request, item_id):
     try:
         cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
@@ -588,3 +661,204 @@ def remove_from_cart(request, item_id):
             })
         messages.error(request, f'Error removing item: {str(e)}')
         return redirect('view_cart')
+    
+
+@login_required
+def checkout(request):
+    try:
+        # Get user's cart
+        cart = Cart.objects.get(user=request.user)
+        cart_items = cart.items.select_related('product').all()
+        
+        if not cart_items:
+            messages.error(request, 'Your cart is empty')
+            return redirect('view_cart')
+        
+        # Get user's saved addresses
+        addresses = Address.objects.filter(user=request.user, is_deleted=False)
+        
+        # Calculate totals
+        subtotal = sum(item.quantity * item.price for item in cart_items)
+        shipping_fee = Decimal('40.00')
+        total = subtotal + shipping_fee
+        
+        if request.method == 'POST':
+            address_id = request.POST.get('address')
+            payment_method = request.POST.get('payment_method')
+            
+            if not address_id:
+                messages.error(request, 'Please select a delivery address')
+                return redirect('checkout')
+            
+            try:
+                with transaction.atomic():
+                    address = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
+                    
+                    # Create order
+                    order = Order.objects.create(
+                        user=request.user,
+                        shipping_address=f"{address.address_line1} {address.address_line2}".strip(),
+                        shipping_city=address.city,
+                        shipping_state=address.state,
+                        shipping_pincode=address.pincode,
+                        shipping_phone=address.phone,
+                        payment_method=payment_method,
+                        subtotal=subtotal,
+                        shipping_fee=shipping_fee,
+                        total=total
+                    )
+                    
+                    # Create order items
+                    for cart_item in cart_items:
+                        OrderItem.objects.create(
+                            order=order,
+                            product=cart_item.product,
+                            quantity=cart_item.quantity,
+                            price=cart_item.price
+                        )
+                        
+                        # Update product stock
+                        product = cart_item.product
+                        if product.stock >= cart_item.quantity:
+                            product.stock -= cart_item.quantity
+                            product.save()
+                        else:
+                            raise ValueError(f'Insufficient stock for {product.name}')
+                    
+                    # Clear cart after successful order creation
+                    cart.items.all().delete()
+                    
+                    messages.success(request, 'Order placed successfully!')
+                    return redirect('order_confirmation', order_id=order.id)
+                    
+            except Address.DoesNotExist:
+                messages.error(request, 'Invalid address selected')
+                return redirect('checkout')
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('checkout')
+            except Exception as e:
+                messages.error(request, f'Error processing order: {str(e)}')
+                return redirect('checkout')
+                
+        context = {
+            'cart_items': cart_items,
+            'addresses': addresses,
+            'subtotal': subtotal,
+            'shipping_fee': shipping_fee,
+            'total': total,
+        }
+        return render(request, 'user/checkout.html', context)
+        
+    except Cart.DoesNotExist:
+        messages.error(request, 'Your cart is empty')
+        return redirect('view_cart')
+    
+@login_required
+def add_address(request):
+    if request.method == 'POST':
+        try:
+            # Get form data
+            full_name = request.POST.get('full_name')
+            phone = request.POST.get('phone')
+            address_line1 = request.POST.get('address_line1')
+            address_line2 = request.POST.get('address_line2')
+            city = request.POST.get('city')
+            state = request.POST.get('state')
+            pincode = request.POST.get('pincode')
+            is_default = request.POST.get('is_default') == 'on'
+
+            # Validate required fields
+            if not all([full_name, phone, address_line1, city, state, pincode]):
+                messages.error(request, 'Please fill all required fields')
+                return redirect('add_address')
+
+            # If this is the first address or set as default
+            if is_default:
+                # Set all other addresses as non-default
+                Address.objects.filter(user=request.user).update(is_default=False)
+
+            # Create new address
+            Address.objects.create(
+                user=request.user,
+                full_name=full_name,
+                phone=phone,
+                address_line1=address_line1,
+                address_line2=address_line2,
+                city=city,
+                state=state,
+                pincode=pincode,
+                is_default=is_default
+            )
+
+            messages.success(request, 'Address added successfully')
+            return redirect('checkout')  # or wherever you want to redirect
+
+        except Exception as e:
+            messages.error(request, f'Error adding address: {str(e)}')
+            return redirect('add_address')
+
+    return render(request, 'user/add_address.html')
+
+@login_required
+def manage_addresses(request):
+    addresses = Address.objects.filter(user=request.user, is_deleted=False)
+    return render(request, 'user/manage_addresses.html', {'addresses': addresses})
+
+@login_required
+def edit_address(request, address_id):
+    try:
+        address = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
+        
+        if request.method == 'POST':
+            address.full_name = request.POST.get('full_name')
+            address.phone = request.POST.get('phone')
+            address.address_line1 = request.POST.get('address_line1')
+            address.address_line2 = request.POST.get('address_line2')
+            address.city = request.POST.get('city')
+            address.state = request.POST.get('state')
+            address.pincode = request.POST.get('pincode')
+            is_default = request.POST.get('is_default') == 'on'
+
+            if is_default:
+                Address.objects.filter(user=request.user).update(is_default=False)
+                address.is_default = True
+
+            address.save()
+            messages.success(request, 'Address updated successfully')
+            return redirect('manage_addresses')
+
+        return render(request, 'user/edit_address.html', {'address': address})
+
+    except Address.DoesNotExist:
+        messages.error(request, 'Address not found')
+        return redirect('manage_addresses')
+
+@login_required
+def delete_address(request, address_id):
+    try:
+        address = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
+        address.is_deleted = True
+        address.save()
+        messages.success(request, 'Address deleted successfully')
+    except Address.DoesNotExist:
+        messages.error(request, 'Address not found')
+    return redirect('manage_addresses')
+
+
+@login_required
+def order_confirmation(request, order_id):
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        context = {
+            'order': order,
+            'order_items': order.items.all()
+        }
+        return render(request, 'user/order_confirmation.html', context)
+    except Order.DoesNotExist:
+        messages.error(request, 'Order not found')
+        return redirect('view_cart')
+    
+
+
+

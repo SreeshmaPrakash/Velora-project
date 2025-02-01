@@ -1,96 +1,393 @@
-{% extends 'admin/base.html' %}
+{% extends 'admin/adminbase.html' %}
+{% load static %}
 
 {% block content %}
-<div class="orders-container">
-    <h1>Order Management</h1>
+<div class="container-fluid">
+    <h2 class="mb-4">Order Management</h2>
 
     <!-- Filters -->
-    <div class="filters">
-        <form method="get" class="filter-form">
-            <div class="form-group">
-                <label>Status</label>
-                <select name="status" class="form-control">
-                    <option value="">All</option>
-                    {% for status_value, status_label in status_choices %}
-                    <option value="{{ status_value }}" {% if status_value == selected_status %}selected{% endif %}>
-                        {{ status_label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Date From</label>
-                <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label>Date To</label>
-                <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label>Search</label>
-                <input type="text" name="search" value="{{ search }}" placeholder="Order #, Email, Username" class="form-control">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-        </form>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        {% for status_code, status_label in status_choices %}
+                            <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
+                                {{ status_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="Order #, Email, or Username" value="{{ search }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                    <a href="{% url 'admin_orders' %}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Orders Table -->
-    <div class="orders-table">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Customer</th>
-                    <th>Date</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in orders %}
-                <tr>
-                    <td>{{ order.order_number }}</td>
-                    <td>{{ order.user.email }}</td>
-                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>₹{{ order.total_amount }}</td>
-                    <td>
-                        <span class="status-badge status-{{ order.status }}">
-                            {{ order.get_status_display }}
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-sm btn-info">View</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6">No orders found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ order.user.email }}</td>
+                            <td>₹{{ order.total }}</td>
+                            <td>
+                                <span class="badge bg-{{ order.get_status_color }}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-sm btn-info">
+                                    View Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No orders found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if orders.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if orders.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.previous_page_number }}&status={{ selected_status }}&date_from={{ date_from }}&date_to={{ date_to }}&search={{ search }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in orders.paginator.page_range %}
+                    <li class="page-item {% if orders.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}&status={{ selected_status }}&date_from={{ date_from }}&date_to={{ date_to }}&search={{ search }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.next_page_number }}&status={{ selected_status }}&date_from={{ date_from }}&date_to={{ date_to }}&search={{ search }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
     </div>
-
-    <!-- Pagination -->
-    {% if orders.has_other_pages %}
-    <div class="pagination">
-        {% if orders.has_previous %}
-        <a href="?page={{ orders.previous_page_number }}" class="btn btn-sm btn-outline-primary">&laquo; Previous</a>
-        {% endif %}
-
-        <span class="current-page">
-            Page {{ orders.number }} of {{ orders.paginator.num_pages }}
-        </span>
-
-        {% if orders.has_next %}
-        <a href="?page={{ orders.next_page_number }}" class="btn btn-sm btn-outline-primary">Next &raquo;</a>
-        {% endif %}
-    </div>
-    {% endif %}
 </div>
+
+<style>
+    :root {
+        --primary-purple: #800080;
+        --dark-purple: #660066;
+        --light-purple: #e6b3e6;
+        --hover-purple: #993399;
+    }
+
+    /* Layout Styles */
+    .admin-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Card Styles */
+    .card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        border: none;
+    }
+
+    .card-header {
+        background-color: var(--primary-purple);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        padding: 15px 20px;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    /* Table Styles */
+    .table {
+        width: 100%;
+        margin-bottom: 1rem;
+        background-color: transparent;
+    }
+
+    .table th {
+        background-color: var(--light-purple);
+        color: var(--dark-purple);
+        font-weight: bold;
+        padding: 12px;
+        border-bottom: 2px solid var(--primary-purple);
+    }
+
+    .table td {
+        padding: 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Button Styles */
+    .btn-primary {
+        background-color: var(--primary-purple);
+        border-color: var(--primary-purple);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--hover-purple);
+        border-color: var(--hover-purple);
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+    /* Form Styles */
+    .form-control {
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 0.2rem rgba(128, 0, 128, 0.25);
+    }
+
+    .form-select {
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+
+    .form-select:focus {
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 0.2rem rgba(128, 0, 128, 0.25);
+    }
+
+    /* Badge Styles */
+    .badge {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .badge-pending { background-color: #ffc107; color: #000; }
+    .badge-processing { background-color: var(--primary-purple); color: white; }
+    .badge-shipped { background-color: #28a745; color: white; }
+    .badge-delivered { background-color: #28a745; color: white; }
+    .badge-cancelled { background-color: #dc3545; color: white; }
+
+    /* Pagination Styles */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .pagination .page-link {
+        color: var(--primary-purple);
+        padding: 8px 16px;
+        border: 1px solid #dee2e6;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary-purple);
+        border-color: var(--primary-purple);
+        color: white;
+    }
+
+    .pagination .page-link:hover {
+        background-color: var(--light-purple);
+        color: var(--dark-purple);
+    }
+
+    /* Modal Styles */
+    .modal-header {
+        background-color: var(--primary-purple);
+        color: white;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+        border: none;
+    }
+
+    .btn-close {
+        color: white;
+    }
+
+    /* Stock Status Styles */
+    .stock-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .stock-low {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .stock-out {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .stock-ok {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    /* Image Styles */
+    .product-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Alert Styles */
+    .alert {
+        border-radius: 4px;
+        padding: 12px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 768px) {
+        .admin-container {
+            padding: 10px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        .card-header {
+            padding: 12px 15px;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+    }
+
+    /* Filter Section Styles */
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .filter-section .form-group {
+        margin-bottom: 15px;
+    }
+
+    /* Status Timeline Styles */
+    .status-timeline {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px 0;
+        position: relative;
+        padding: 0 20px;
+    }
+
+    .status-point {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: var(--light-purple);
+        position: relative;
+        z-index: 1;
+    }
+
+    .status-point.active {
+        background-color: var(--primary-purple);
+    }
+
+    .status-line {
+        position: absolute;
+        top: 50%;
+        left: 40px;
+        right: 40px;
+        height: 2px;
+        background-color: var(--light-purple);
+        transform: translateY(-50%);
+    }
+</style>
 {% endblock %}

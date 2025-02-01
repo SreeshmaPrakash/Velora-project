@@ -1,83 +1,125 @@
-{% extends 'admin/base.html' %}
+<!-- admin/orders_detail.html -->
+{% extends 'admin/adminbase.html' %}
+{% load static %}
 
 {% block content %}
-<div class="order-detail-container">
-    <h1>Order #{{ order.order_number }}</h1>
-
-    <!-- Order Information -->
-    <div class="order-info">
-        <div class="card">
-            <div class="card-header">
-                <h3>Order Details</h3>
-            </div>
-            <div class="card-body">
-                <p><strong>Date:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
-                <p><strong>Customer:</strong> {{ order.user.email }}</p>
-                <p><strong>Total Amount:</strong> ₹{{ order.total_amount }}</p>
-                
-                <!-- Status Update Form -->
-                <form method="post" class="status-form">
-                    {% csrf_token %}
-                    <div class="form-group">
-                        <label><strong>Status:</strong></label>
-                        <select name="status" class="form-control" onchange="this.form.submit()">
-                            {% for status_value, status_label in status_choices %}
-                            <option value="{{ status_value }}" {% if status_value == order.status %}selected{% endif %}>
-                                {{ status_label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Shipping Address -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h3>Shipping Address</h3>
-            </div>
-            <div class="card-body">
-                <p>{{ order.address.address }}</p>
-                <p>{{ order.address.city }}, {{ order.address.state }}</p>
-                <p>PIN: {{ order.address.pincode }}</p>
-                <p>Phone: {{ order.address.phone }}</p>
-            </div>
-        </div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Order #{{ order.order_number }}</h2>
+        <a href="{% url 'admin_orders' %}" class="btn btn-secondary">Back to Orders</a>
     </div>
 
-    <!-- Order Items -->
-    <div class="order-items card mt-4">
-        <div class="card-header">
-            <h3>Order Items</h3>
+    <!-- Order Details -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Order Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items.all %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if item.product.product_images.first %}
+                                                <img src="{{ item.product.product_images.first.image.url }}" 
+                                                     alt="{{ item.product.name }}" 
+                                                     style="width: 50px; height: 50px; object-fit: cover;"
+                                                     class="me-2">
+                                            {% endif %}
+                                            {{ item.product.name }}
+                                        </div>
+                                    </td>
+                                    <td>₹{{ item.price }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>₹{{ item.get_cost }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td>₹{{ order.get_subtotal }}</td>
+                                </tr>
+                                {% if order.discount %}
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Discount:</strong></td>
+                                    <td>-₹{{ order.discount }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                    <td><strong>₹{{ order.total }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in order.items.all %}
-                    <tr>
-                        <td>{{ item.product.name }}</td>
-                        <td>₹{{ item.price }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>₹{{ item.get_total }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-right"><strong>Total:</strong></td>
-                        <td><strong>₹{{ order.total_amount }}</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
+
+        <div class="col-md-4">
+            <!-- Order Status -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Order Status</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Status</label>
+                            <select name="status" class="form-select">
+                                {% for status_code, status_label in status_choices %}
+                                    <option value="{{ status_code }}" 
+                                            {% if order.status == status_code %}selected{% endif %}>
+                                        {{ status_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Status</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ order.user.get_full_name }}</p>
+                    <p><strong>Email:</strong> {{ order.user.email }}</p>
+                    <p><strong>Phone:</strong> {{ order.shipping_phone }}</p>
+                </div>
+            </div>
+
+            <!-- Shipping Address -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Shipping Address</h5>
+                </div>
+                <div class="card-body">
+                    <address>
+                        {{ order.shipping_address }}<br>
+                        {{ order.shipping_city }}, {{ order.shipping_state }}<br>
+                        {{ order.shipping_country }}<br>
+                        PIN: {{ order.shipping_pincode }}
+                    </address>
+                </div>
+            </div>
         </div>
     </div>
 </div>

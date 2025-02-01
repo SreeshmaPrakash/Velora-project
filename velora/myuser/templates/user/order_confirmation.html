@@ -1,0 +1,153 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="order-confirmation">
+    <div class="card">
+        <div class="card-header">
+            <h2>Order Confirmation</h2>
+        </div>
+        <div class="card-body">
+            <div class="success-message">
+                <i class="fas fa-check-circle"></i>
+                <h3>Thank You for Your Order!</h3>
+                <p>Order Number: {{ order.order_number }}</p>
+            </div>
+
+            <div class="order-details">
+                <h4>Order Details</h4>
+                <div class="order-items">
+                    {% for item in order_items %}
+                    <div class="order-item">
+                        <div class="item-details">
+                            <h5>{{ item.product.name }}</h5>
+                            <p>Quantity: {{ item.quantity }}</p>
+                            <p class="price">₹{{ item.price }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="order-summary">
+                    <div class="summary-line">
+                        <span>Subtotal:</span>
+                        <span>₹{{ order.subtotal }}</span>
+                    </div>
+                    <div class="summary-line">
+                        <span>Shipping:</span>
+                        <span>₹{{ order.shipping_fee }}</span>
+                    </div>
+                    <div class="summary-line total">
+                        <span>Total:</span>
+                        <span>₹{{ order.total }}</span>
+                    </div>
+                </div>
+
+                <div class="shipping-info">
+                    <h4>Shipping Information</h4>
+                    <p>{{ order.shipping_address }}</p>
+                    <p>{{ order.shipping_city }}, {{ order.shipping_state }} - {{ order.shipping_pincode }}</p>
+                    <p>Phone: {{ order.shipping_phone }}</p>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <a href="{% url 'userhome' %}" class="btn btn-primary">Continue Shopping</a>
+                <a href="" class="btn btn-secondary">View My Orders</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.order-confirmation {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+.success-message {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.success-message i {
+    color: #28a745;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.order-details {
+    margin-top: 2rem;
+}
+
+.order-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.order-summary {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.summary-line.total {
+    font-weight: bold;
+    font-size: 1.2rem;
+    border-top: 2px solid #dee2e6;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.shipping-info {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.action-buttons {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: var(--primary-purple);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="checkout-container">
+    <h2>Checkout</h2>
+
+    <div class="checkout-content">
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Order Summary</h3>
+                </div>
+                <div class="card-body">
+                    {% for item in cart_items %}
+                    <div class="cart-item">
+                        <div class="item-image">
+                            {% if item.product.product_images.first %}
+                                <img src="{{ item.product.product_images.first.image.url }}" 
+                                     alt="{{ item.product.name }}">
+                            {% endif %}
+                        </div>
+                        <div class="item-details">
+                            <h4>{{ item.product.name }}</h4>
+                            <p>Quantity: {{ item.quantity }}</p>
+                            <p class="price">₹{{ item.price }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="order-totals">
+                        <div class="total-line">
+                            <span>Subtotal</span>
+                            <span>₹{{ subtotal }}</span>
+                        </div>
+                        <div class="total-line">
+                            <span>Shipping Fee</span>
+                            <span>₹{{ shipping_fee }}</span>
+                        </div>
+                        <div class="total-line grand-total">
+                            <span>Total</span>
+                            <span>₹{{ total }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Form -->
+        <div class="checkout-form">
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Delivery Address -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Delivery Address</h3>
+                    </div>
+                    
+<div class="card-body">
+    {% if addresses %}
+        {% for address in addresses %}
+        <div class="address-option">
+            <input type="radio" name="address" id="address_{{ address.id }}" 
+                   value="{{ address.id }}" required>
+            <label for="address_{{ address.id }}">
+                <strong>{{ address.full_name }}</strong>
+                <p>{{ address.address_line1 }}</p>
+                {% if address.address_line2 %}
+                    <p>{{ address.address_line2 }}</p>
+                {% endif %}
+                <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+                <p>Phone: {{ address.phone }}</p>
+            </label>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No saved addresses. <a href="{% url 'add_address'%}">Add a new address</a></p>
+    {% endif %}
+</div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Payment Method</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-options">
+                            <div class="payment-option">
+                                <input type="radio" name="payment_method" id="cod" value="COD" required>
+                                <label for="cod">Cash on Delivery</label>
+                            </div>
+                            <!-- Add more payment options as needed -->
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="place-order-btn">Place Order</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .checkout-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 20px;
+    }
+
+    .checkout-content {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 2rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+
+    .card-header {
+        background-color: var(--primary-purple);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .cart-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .item-image img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    .item-details {
+        flex: 1;
+    }
+
+    .order-totals {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .total-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .grand-total {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 2px solid #eee;
+    }
+
+    .address-option {
+        padding: 1rem;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+
+    .address-option input[type="radio"] {
+        margin-right: 1rem;
+    }
+
+    .payment-option {
+        padding: 1rem;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+
+    .place-order-btn {
+        background-color: var(--primary-purple);
+        color: white;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 4px;
+        width: 100%;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .place-order-btn:hover {
+        background-color: var(--dark-purple);
+    }
+
+    @media (max-width: 768px) {
+        .checkout-content {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

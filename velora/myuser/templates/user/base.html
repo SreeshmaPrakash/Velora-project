@@ -4,7 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}VELORA{% endblock %}</title>
+    
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -152,6 +157,44 @@
             text-decoration: none;
             color: #800080;
         }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 4px;
+            color: white;
+            font-size: 1rem;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .notification.success {
+            background-color: #28a745;
+        }
+
+        .notification.error {
+            background-color: #dc3545;
+        }
+        
+        /* Add cart count badge */
+        .cart-icon {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
 
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -192,10 +235,23 @@
             </nav> 
             <div class="search-cart">
                 <input type="search" class="search-box" placeholder="Search...">
-                <a href="{% url 'view_cart' %}"style="color: white;">🛒</a>
+                <a href="{% url 'view_cart' %}" class="cart-icon" style="color: white; position: relative;">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" style="
+                        position: absolute;
+                        top: -8px;
+                        right: -8px;
+                        background-color: #ff4444;
+                        color: white;
+                        border-radius: 50%;
+                        padding: 2px 6px;
+                        font-size: 12px;
+                        font-weight: bold;
+                    ">{{ request.user.cart.items.count|default:"0" }}</span>
+                </a>
                 <a style="color: white;">❤️</a>
                 <a href="{% url 'profile' %}" style="color: white;">👤</a>
-                <a href="{% url 'userlogout' %}" style= "text-decoration: none; color:rgb(234, 206, 234)">Logout</a>
+                <a href="{% url 'userlogout' %}" style="text-decoration: none; color:rgb(234, 206, 234)">Logout</a>
             </div>
         </div>
     </header>
@@ -260,6 +316,59 @@
         </div>
     </footer>
 
-    {% block extra_js %}{% endblock %}
+    <script>
+        // CSRF token setup for AJAX requests
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Setup CSRF token for all AJAX requests
+        const csrftoken = getCookie('csrftoken');
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        
+        // Global notification function
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+        
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        // Global function to update cart count
+        function updateCartCount(count) {
+            const cartCount = document.querySelector('.cart-count');
+            if (cartCount) {
+                cartCount.textContent = count;
+            }
+        }
+        </script>
+        
+        {% block extra_js %}{% endblock %}
+    
 </body>
 </html>

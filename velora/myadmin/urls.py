@@ -31,10 +31,10 @@ urlpatterns = [
     path('productsearch/',views.product_search,name='productSearch'),
 
     # ------order management-----
-    path('orders/', views.orders, name='orders'),
-    path('orders/<int:order_id>/', views.order_detail, name='order_detail'),
-    path('inventory/', views.inventory, name='inventory'),
-    path('inventory/update/<int:product_id>/', views.update_stock, name='update_stock'),
+    path('orders/', views.orders, name='admin_orders'),
+    path('orders/<int:order_id>/', views.order_detail, name='admin_order_detail'),
+    path('inventory/', views.inventory, name='admin_inventory'),
+    path('inventory/update/<int:product_id>/', views.update_stock, name='admin_update_stock'),
 
 ]
 

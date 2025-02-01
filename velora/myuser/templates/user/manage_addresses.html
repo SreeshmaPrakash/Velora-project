@@ -1,0 +1,114 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="addresses-container">
+    <div class="addresses-header">
+        <h2>My Addresses</h2>
+        <a href="{% url 'add_address' %}" class="btn btn-primary">Add New Address</a>
+    </div>
+
+    <div class="addresses-list">
+        {% for address in addresses %}
+        <div class="address-card">
+            <div class="address-content">
+                {% if address.is_default %}
+                <span class="default-badge">Default</span>
+                {% endif %}
+                <h3>{{ address.full_name }}</h3>
+                <p>{{ address.address_line1 }}</p>
+                {% if address.address_line2 %}
+                <p>{{ address.address_line2 }}</p>
+                {% endif %}
+                <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+                <p>Phone: {{ address.phone }}</p>
+            </div>
+            <div class="address-actions">
+                <a href="{% url 'edit_address' address.id %}" class="btn btn-secondary">Edit</a>
+                <a href="{% url 'delete_address' address.id %}" class="btn btn-danger" 
+                   onclick="return confirm('Are you sure you want to delete this address?')">Delete</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-addresses">
+            <p>You haven't added any addresses yet.</p>
+            <a href="{% url 'add_address' %}" class="btn btn-primary">Add Your First Address</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.addresses-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+.addresses-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.address-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+}
+
+.default-badge {
+    background-color: var(--primary-purple);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.address-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.no-addresses {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+    .address-card {
+        flex-direction: column;
+    }
+    
+    .address-actions {
+        margin-top: 1rem;
+        width: 100%;
+    }
+    
+    .address-actions .btn {
+        flex: 1;
+    }
+}
+</style>
+{% endblock %}

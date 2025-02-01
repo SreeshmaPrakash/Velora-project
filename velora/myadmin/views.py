@@ -3,16 +3,17 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from .models import Customer, Category, Products, Productimage
+from .models import *
 from .forms import CategoryForm, ProductForm, ProductImageForm
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator,EmptyPage, PageNotAnInteger
 from django.core.files.base import ContentFile
 from .decorator import superuser_required
 from .forms import ProductForm, ProductEditForm, ProductImageForm
 from django.contrib.auth.models import User 
 from datetime import datetime, timedelta
 from django.db.models import Q
-
+from django.db import transaction
+from django.conf import settings
 
 
 # ------admin login------
@@ -300,7 +301,7 @@ def set_primary_image(request, image_id):
     image = get_object_or_404(Productimage, id=image_id)
     product = image.product
     
-    # Remove primary status from all other images
+   
     product.images.all().update(is_primary=False)
     
     # Set this image as primary
@@ -312,122 +313,175 @@ def set_primary_image(request, image_id):
 
 @superuser_required
 def orders(request):
-    # Get filters from request
-    status = request.GET.get('status', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    search = request.GET.get('search', '')
+    try:
+        status = request.GET.get('status', '')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+        search = request.GET.get('search', '')
 
-    # Base queryset
-    orders = Order.objects.all()
+        orders = Order.objects.all().order_by('-created_at')  # Add default ordering
 
-    # Apply filters
-    if status:
-        orders = orders.filter(status=status)
-    if date_from:
-        orders = orders.filter(created_at__gte=datetime.strptime(date_from, '%Y-%m-%d'))
-    if date_to:
-        orders = orders.filter(created_at__lte=datetime.strptime(date_to, '%Y-%m-%d'))
-    if search:
-        orders = orders.filter(
-            Q(order_number__icontains=search) |
-            Q(user__email__icontains=search) |
-            Q(user__username__icontains=search)
-        )
+        # Apply filters with error handling
+        if status:
+            orders = orders.filter(status=status)
+        if date_from:
+            try:
+                date_from = datetime.strptime(date_from, '%Y-%m-%d')
+                orders = orders.filter(created_at__gte=date_from)
+            except ValueError:
+                messages.error(request, 'Invalid date format for Date From')
+        if date_to:
+            try:
+                date_to = datetime.strptime(date_to, '%Y-%m-%d')
+                orders = orders.filter(created_at__lte=date_to)
+            except ValueError:
+                messages.error(request, 'Invalid date format for Date To')
+        if search:
+            orders = orders.filter(
+                Q(order_number__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__username__icontains=search)
+            )
 
-    # Pagination
-    paginator = Paginator(orders, 20)
-    page = request.GET.get('page')
-    orders = paginator.get_page(page)
+        # Pagination with error handling
+        page = request.GET.get('page', 1)
+        paginator = Paginator(orders, 20)
+        try:
+            orders = paginator.page(page)
+        except PageNotAnInteger:
+            orders = paginator.page(1)
+        except EmptyPage:
+            orders = paginator.page(paginator.num_pages)
 
-    context = {
-        'orders': orders,
-        'status_choices': OrderStatus.choices,
-        'selected_status': status,
-        'date_from': date_from,
-        'date_to': date_to,
-        'search': search,
-    }
-    return render(request, 'admin/orders_list.html', context)
+        context = {
+            'orders': orders,
+            'status_choices': OrderStatus.choices,
+            'selected_status': status,
+            'date_from': date_from,
+            'date_to': date_to,
+            'search': search,
+        }
+        return render(request, 'admin/order_list.html', context)
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('dashboard')  
 
 @superuser_required
 def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
-    
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status and new_status != order.status:
-            old_status = order.status
-            order.status = new_status
-            order.save()
-            
-            # Update inventory if order is cancelled
-            if new_status == OrderStatus.CANCELLED and old_status != OrderStatus.CANCELLED:
-                for item in order.items.all():
-                    product = item.product
-                    product.stock += item.quantity
-                    product.save()
-            
-            messages.success(request, f'Order status updated to {new_status}')
+    try:
+        order = get_object_or_404(Order, id=order_id)
         
-        return redirect('order_detail', order_id=order.id)
-    
-    context = {
-        'order': order,
-        'status_choices': OrderStatus.choices,
-    }
-    return render(request, 'admin/orders_detail.html', context)
+        if request.method == 'POST':
+            new_status = request.POST.get('status')
+            if new_status and new_status != order.status:
+                with transaction.atomic(): 
+                    old_status = order.status
+                    order.status = new_status
+                    order.save()
+                    
+                    # Update inventory if order is cancelled
+                    if new_status == OrderStatus.CANCELLED and old_status != OrderStatus.CANCELLED:
+                        for item in order.items.all():
+                            product = item.product
+                            product.stock += item.quantity
+                            product.save()
+                            
+                    # Log the status change
+                    OrderStatusHistory.objects.create(
+                        order=order,
+                        old_status=old_status,
+                        new_status=new_status,
+                        changed_by=request.user
+                    )
+                    
+                messages.success(request, f'Order status updated to {new_status}')
+            
+            return redirect('admin_orders', order_id=order.id)
+        
+        context = {
+            'order': order,
+            'status_choices': OrderStatus.choices,
+            'status_history': order.status_history.all().order_by('-created_at')
+        }
+        return render(request, 'admin/order_detail.html', context)
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('admin_orders')
 
 @superuser_required
 def inventory(request):
-    products = Products.objects.all()
-    low_stock_threshold = 10  # Define your threshold
+    try:
+        products = Products.objects.all().order_by('name')
+        low_stock_threshold = getattr(settings, 'LOW_STOCK_THRESHOLD', 10)
 
-    # Get filters
-    category = request.GET.get('category', '')
-    stock_status = request.GET.get('stock_status', '')
-    search = request.GET.get('search', '')
+        # Get filters
+        category = request.GET.get('category', '')
+        stock_status = request.GET.get('stock_status', '')
+        search = request.GET.get('search', '')
 
-    if category:
-        products = products.filter(category_id=category)
-    if stock_status == 'low':
-        products = products.filter(stock__lte=low_stock_threshold)
-    elif stock_status == 'out':
-        products = products.filter(stock=0)
-    if search:
-        products = products.filter(
-            Q(name__icontains=search) |
-            Q(sku__icontains=search)
-        )
+        if category:
+            products = products.filter(category_id=category)
+        if stock_status == 'low':
+            products = products.filter(stock__lte=low_stock_threshold)
+        elif stock_status == 'out':
+            products = products.filter(stock=0)
+        if search:
+            products = products.filter(
+                Q(name__icontains=search) |
+                Q(sku__icontains=search)
+            )
 
-    # Pagination
-    paginator = Paginator(products, 20)
-    page = request.GET.get('page')
-    products = paginator.get_page(page)
+        # Pagination with error handling
+        page = request.GET.get('page', 1)
+        paginator = Paginator(products, 20)
+        try:
+            products = paginator.page(page)
+        except PageNotAnInteger:
+            products = paginator.page(1)
+        except EmptyPage:
+            products = paginator.page(paginator.num_pages)
 
-    context = {
-        'products': products,
-        'categories': Category.objects.all(),
-        'selected_category': category,
-        'stock_status': stock_status,
-        'search': search,
-        'low_stock_threshold': low_stock_threshold,
-    }
-    return render(request, 'admin/inventory_list.html', context)
+        context = {
+            'products': products,
+            'categories': Category.objects.all(),
+            'selected_category': category,
+            'stock_status': stock_status,
+            'search': search,
+            'low_stock_threshold': low_stock_threshold,
+        }
+        return render(request, 'admin/inventory_list.html', context)
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('dashboard')
 
 @superuser_required
 def update_stock(request, product_id):
     if request.method == 'POST':
-        product = get_object_or_404(Products, id=product_id)
         try:
-            new_stock = int(request.POST.get('stock', 0))
-            if new_stock >= 0:
-                product.stock = new_stock
-                product.save()
-                messages.success(request, f'Stock updated for {product.name}')
-            else:
-                messages.error(request, 'Stock cannot be negative')
+            with transaction.atomic():
+                product = get_object_or_404(Products, id=product_id)
+                new_stock = int(request.POST.get('stock', 0))
+                if new_stock >= 0:
+                    old_stock = product.stock
+                    product.stock = new_stock
+                    product.save()
+                    
+                    # Log stock update
+                    StockHistory.objects.create(
+                        product=product,
+                        old_stock=old_stock,
+                        new_stock=new_stock,
+                        updated_by=request.user
+                    )
+                    
+                    messages.success(request, f'Stock updated for {product.name}')
+                else:
+                    messages.error(request, 'Stock cannot be negative')
         except ValueError:
             messages.error(request, 'Invalid stock value')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
     
     return redirect('inventory')
+
+
