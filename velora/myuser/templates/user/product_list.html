@@ -72,8 +72,8 @@
                     <!-- Rating Stars -->
                     <div class="product-rating">
                         <div class="stars">
-                            {% for i in "12345" %}
-                                {% if forloop.counter <= product.rating %}
+                            {% for i in 5|make_list %}
+                            {% if forloop.counter <= product.rating %}
                                     <i class="fas fa-star"></i>
                                 {% elif forloop.counter <= product.rating|add:"0.5" %}
                                     <i class="fas fa-star-half-alt"></i>
@@ -88,10 +88,11 @@
                     <!-- Price Section -->
                     <div class="price-section">
                         <div class="price-details">
-                            <p class="current-price">₹{{ product.price }}</p>
-                            {% if product.original_price %}
-                                <p class="original-price">₹{{ product.original_price }}</p>
-                            {% endif %}
+                            <span class="current-price">₹{{ product.discount_price|default:product.price }}</span>
+{% if product.discount_price %}
+    <span class="original-price">₹{{ product.price }}</span>
+{% endif %}
+
                         </div>
                     </div>
 
@@ -108,7 +109,7 @@
                         {% endif %}
                         
                         {% if product.price >= 500 %}
-                            <span class="feature-badge free-delivery">
+                            <span href="" class="feature-badge free-delivery">
                                 <i class="fas fa-truck"></i> Free Delivery
                             </span>
                         {% endif %}
@@ -116,8 +117,13 @@
                     </div>
                 </div>
             </a>
-            <button class="add-to-cart-btn" onclick="addToCart({{ product.id }})">
-                <i class="fas fa-shopping-cart"></i> Add to Cart
+            <button class="add-to-cart-btn" data-product-id="{{ product.id }}" {% if not product.stock %}disabled{% endif %}>
+                <i class="fas fa-shopping-cart"></i> 
+                {% if product.stock %}
+                    Add to Cart
+                {% else %}
+                    Out of Stock
+                {% endif %}
             </button>
         </div>
         {% empty %}
@@ -129,7 +135,27 @@
     </div>
 </div>
 <style>
-    /* Main Container Styles */
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 4px;
+        color: white;
+        font-size: 1rem;
+        z-index: 1000;
+        transition: opacity 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .notification.success {
+        background-color: #28a745;
+
+    }
+    .notification.error {
+        background-color: #dc3545;
+    }
+
     .category-filter {
         display: flex;
         gap: 12px;
@@ -474,59 +500,98 @@
     });
 
 
+    document.querySelector('.sort-select').addEventListener('change', function() {
+        const params = new URLSearchParams(window.location.search);
+        params.set('sort', this.value);
+        window.location.search = params.toString();
+    });   
+
     document.addEventListener('DOMContentLoaded', function() {
-        // Sort functionality
-        const sortSelect = document.querySelector('.sort-select');
-        sortSelect.addEventListener('change', function() {
-            // Add your sorting logic here
-            console.log('Sort by:', this.value);
-        });
+    // Add event listeners to all add to cart buttons
+    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+    console.log('Found add to cart buttons:', addToCartButtons.length); // Debug log
     
-        // Add to cart functionality
-        window.addToCart = function(productId) {
-            fetch('/add-to-cart/', {
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Button clicked!'); // Debug log
+            
+            const productId = this.getAttribute('data-product-id');
+            console.log('Product ID:', productId); // Debug log
+            
+            // Disable button and show loading state
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            
+            fetch(`/add_to_cart/${productId}/`, {
                 method: 'POST',
                 headers: {
+                    'X-CSRFToken': getCsrfToken(), 
+                    'X-Requested-With': 'XMLHttpRequest',
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({
-                    product_id: productId,
-                    quantity: 1
-                })
+                body: JSON.stringify({ quantity: 1 })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response received:', response.status); // Debug log
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
-                    // Show success message
-                    showNotification('Product added to cart!', 'success');
+                console.log('Data received:', data); // Debug log
+                if (data.status === 'success') {
+                    showNotification('Added to cart!', 'success');
+                    // Update cart count if available
+                    const cartCount = document.querySelector('.cart-count');
+                    if (cartCount && data.cart_count) {
+                        cartCount.textContent = data.cart_count;
+                    }
                 } else {
-                    // Show error message
                     showNotification(data.message || 'Error adding to cart', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 showNotification('Error adding to cart', 'error');
+            })
+            .finally(() => {
+                // Re-enable button and restore text
+                this.disabled = false;
+                this.innerHTML = originalText;
             });
-        };
-    
-        // Notification function
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.innerHTML = message;
-            document.body.appendChild(notification);
-    
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
-            }, 3000);
-        }
+        });
     });
+});
+
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
     </script>
     
     <!-- Add Font Awesome -->

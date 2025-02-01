@@ -1,0 +1,101 @@
+{% extends 'admin/base.html' %}
+
+{% block content %}
+<div class="inventory-container">
+    <h1>Inventory Management</h1>
+
+    <!-- Filters -->
+    <div class="filters">
+        <form method="get" class="filter-form">
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category" class="form-control">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Stock Status</label>
+                <select name="stock_status" class="form-control">
+                    <option value="">All</option>
+                    <option value="low" {% if stock_status == 'low' %}selected{% endif %}>Low Stock</option>
+                    <option value="out" {% if stock_status == 'out' %}selected{% endif %}>Out of Stock</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Search</label>
+                <input type="text" name="search" value="{{ search }}" placeholder="Product name or SKU" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </form>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="inventory-table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Current Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.category.name }}</td>
+                    <td>{{ product.stock }}</td>
+                    <td>
+                        {% if product.stock == 0 %}
+                        <span class="badge badge-danger">Out of Stock</span>
+                        {% elif product.stock <= low_stock_threshold %}
+                        <span class="badge badge-warning">Low Stock</span>
+                        {% else %}
+                        <span class="badge badge-success">In Stock</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'admin_update_stock' product.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="number" name="stock" value="{{ product.stock }}" min="0" class="form-control form-control-sm d-inline" style="width: 80px;">
+                            <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No products found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <div class="pagination">
+        {% if products.has_previous %}
+        <a href="?page={{ products.previous_page_number }}" class="btn btn-sm btn-outline-primary">&laquo; Previous</a>
+        {% endif %}
+
+        <span class="current-page">
+            Page {{ products.number }} of {{ products.paginator.num_pages }}
+        </span>
+
+        {% if products.has_next %}
+        <a href="?page={{ products.next_page_number }}" class="btn btn-sm btn-outline-primary">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,17 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import User
 from PIL import Image
+from decimal import Decimal
 
 
-# Customer and Wallet Models
 class Customer(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    is_blocked = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    gender = models.CharField(max_length=10, choices=(('M', 'Male'), ('F', 'Female')),default='M', null=True, blank=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    pincode = models.CharField(max_length=6, blank=True, null=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
 
 class Wallet(models.Model):
@@ -34,6 +34,7 @@ class Products(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     stock = models.IntegerField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', default=1)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -124,30 +125,41 @@ class PaymentMethod(models.Model):
     name = models.CharField(max_length=100)
 
 
-class Address(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
-    address = models.TextField()
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=10)
-    phone = models.CharField(max_length=15)
-    is_default = models.BooleanField(default=False)
+class OrderStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    PROCESSING = 'processing', 'Processing'
+    SHIPPED = 'shipped', 'Shipped'
+    DELIVERED = 'delivered', 'Delivered'
+    CANCELLED = 'cancelled', 'Cancelled'
+    RETURNED = 'returned', 'Returned'
 
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, related_name='orders')
-    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='orders')
-    total_price = models.FloatField()
-    created_at = models.DateField(auto_now_add=True)
+    order_number = models.CharField(max_length=20, unique=True, default='ORD000001')
+    payment_method = models.ForeignKey('PaymentMethod', on_delete=models.SET_NULL, null=True)
+    address = models.ForeignKey('Address', on_delete=models.SET_NULL, null=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    notes = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ['-created_at']
 
-class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='order_items')
-    quantity = models.IntegerField()
-    price = models.FloatField()
-    status = models.CharField(max_length=50)
+    def __str__(self):
+        return f"Order #{self.order_number}"
+
+    def save(self, *args, **kwargs):
+        if not self.order_number or self.order_number == 'ORD000001':
+            last_order = Order.objects.order_by('-id').first()
+            if last_order and last_order.order_number != 'ORD000001':
+                last_number = int(last_order.order_number[3:])
+                self.order_number = f"ORD{str(last_number + 1).zfill(6)}"
+            else:
+                self.order_number = "ORD000001"
+        super().save(*args, **kwargs)
 
 
 # Wallet Transaction and Coupons
@@ -180,15 +192,32 @@ class AppliedCoupon(models.Model):
 # Cart and Wishlist Models
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cart')
-    discount = models.FloatField(default=0.0)
-    coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True, related_name='carts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
+    def get_total(self):
+        return sum(item.get_cost() for item in self.items.all())
+
+    def get_items_count(self):
+        return self.items.count()
+
+    def __str__(self):
+        return f"Cart for {self.user.username}"
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='cart_items')
-    quantity = models.IntegerField()
-    price = models.FloatField()
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    def get_cost(self):
+        return self.price * self.quantity
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name}"
 
 
 class Wishlist(models.Model):
@@ -222,7 +251,8 @@ class Offer(models.Model):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp = models.CharField(max_length=4, blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
 
     def __str__(self):
         return self.user.username
@@ -237,3 +267,28 @@ class Review(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.rating}'
+
+class Address(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    full_name = models.CharField(max_length=100, default="")
+    phone = models.CharField(max_length=15, default="")
+    address_line1 = models.CharField(max_length=255, default="")
+    address_line2 = models.CharField(max_length=255, blank=True, default="")
+    city = models.CharField(max_length=100, default="")
+    state = models.CharField(max_length=100, default="")
+    pincode = models.CharField(max_length=6, default="")
+    is_default = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_default', '-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            Address.objects.filter(user=self.user).update(is_default=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.full_name}'s address in {self.city}"

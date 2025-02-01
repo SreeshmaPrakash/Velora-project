@@ -192,9 +192,9 @@
             </nav> 
             <div class="search-cart">
                 <input type="search" class="search-box" placeholder="Search...">
-                <a style="color: white;">🛒</a>
+                <a href="{% url 'view_cart' %}"style="color: white;">🛒</a>
                 <a style="color: white;">❤️</a>
-                <a style="color: white;">👤</a>
+                <a href="{% url 'profile' %}" style="color: white;">👤</a>
                 <a href="{% url 'userlogout' %}" style= "text-decoration: none; color:rgb(234, 206, 234)">Logout</a>
             </div>
         </div>

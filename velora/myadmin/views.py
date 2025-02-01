@@ -10,6 +10,10 @@ from django.core.files.base import ContentFile
 from .decorator import superuser_required
 from .forms import ProductForm, ProductEditForm, ProductImageForm
 from django.contrib.auth.models import User 
+from datetime import datetime, timedelta
+from django.db.models import Q
+
+
 
 # ------admin login------
 def adminlogin(request):
@@ -305,3 +309,125 @@ def set_primary_image(request, image_id):
     
     messages.success(request, 'Primary image updated successfully')
     return redirect('edit_product', product_id=product.id)
+
+@superuser_required
+def orders(request):
+    # Get filters from request
+    status = request.GET.get('status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search = request.GET.get('search', '')
+
+    # Base queryset
+    orders = Order.objects.all()
+
+    # Apply filters
+    if status:
+        orders = orders.filter(status=status)
+    if date_from:
+        orders = orders.filter(created_at__gte=datetime.strptime(date_from, '%Y-%m-%d'))
+    if date_to:
+        orders = orders.filter(created_at__lte=datetime.strptime(date_to, '%Y-%m-%d'))
+    if search:
+        orders = orders.filter(
+            Q(order_number__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(user__username__icontains=search)
+        )
+
+    # Pagination
+    paginator = Paginator(orders, 20)
+    page = request.GET.get('page')
+    orders = paginator.get_page(page)
+
+    context = {
+        'orders': orders,
+        'status_choices': OrderStatus.choices,
+        'selected_status': status,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search': search,
+    }
+    return render(request, 'admin/orders_list.html', context)
+
+@superuser_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status and new_status != order.status:
+            old_status = order.status
+            order.status = new_status
+            order.save()
+            
+            # Update inventory if order is cancelled
+            if new_status == OrderStatus.CANCELLED and old_status != OrderStatus.CANCELLED:
+                for item in order.items.all():
+                    product = item.product
+                    product.stock += item.quantity
+                    product.save()
+            
+            messages.success(request, f'Order status updated to {new_status}')
+        
+        return redirect('order_detail', order_id=order.id)
+    
+    context = {
+        'order': order,
+        'status_choices': OrderStatus.choices,
+    }
+    return render(request, 'admin/orders_detail.html', context)
+
+@superuser_required
+def inventory(request):
+    products = Products.objects.all()
+    low_stock_threshold = 10  # Define your threshold
+
+    # Get filters
+    category = request.GET.get('category', '')
+    stock_status = request.GET.get('stock_status', '')
+    search = request.GET.get('search', '')
+
+    if category:
+        products = products.filter(category_id=category)
+    if stock_status == 'low':
+        products = products.filter(stock__lte=low_stock_threshold)
+    elif stock_status == 'out':
+        products = products.filter(stock=0)
+    if search:
+        products = products.filter(
+            Q(name__icontains=search) |
+            Q(sku__icontains=search)
+        )
+
+    # Pagination
+    paginator = Paginator(products, 20)
+    page = request.GET.get('page')
+    products = paginator.get_page(page)
+
+    context = {
+        'products': products,
+        'categories': Category.objects.all(),
+        'selected_category': category,
+        'stock_status': stock_status,
+        'search': search,
+        'low_stock_threshold': low_stock_threshold,
+    }
+    return render(request, 'admin/inventory_list.html', context)
+
+@superuser_required
+def update_stock(request, product_id):
+    if request.method == 'POST':
+        product = get_object_or_404(Products, id=product_id)
+        try:
+            new_stock = int(request.POST.get('stock', 0))
+            if new_stock >= 0:
+                product.stock = new_stock
+                product.save()
+                messages.success(request, f'Stock updated for {product.name}')
+            else:
+                messages.error(request, 'Stock cannot be negative')
+        except ValueError:
+            messages.error(request, 'Invalid stock value')
+    
+    return redirect('inventory')

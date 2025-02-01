@@ -1,0 +1,297 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- User Info Section -->
+    <div class="profile-header">
+        <div class="user-info">
+            <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+            <p>{{ user.email }}</p>
+            <p>{{ customer.phone }}</p>
+        </div>
+        <div class="actions">
+            <a href="{% url 'edit_profile' %}" class="btn btn-primary">Edit Profile</a>
+        </div>
+    </div>
+
+    <!-- Addresses Section -->
+    <div class="section addresses-section">
+        <div class="section-header">
+            <h2>My Addresses</h2>
+            <button class="btn btn-primary" onclick="showAddAddressModal()">Add New Address</button>
+        </div>
+        <div class="addresses-grid">
+            {% for address in addresses %}
+            <div class="address-card {% if address.is_default %}default{% endif %}">
+                {% if address.is_default %}
+                <span class="default-badge">Default</span>
+                {% endif %}
+                <h3>{{ address.full_name }}</h3>
+                <p>{{ address.phone }}</p>
+                <p>{{ address.address_line1 }}</p>
+                {% if address.address_line2 %}
+                <p>{{ address.address_line2 }}</p>
+                {% endif %}
+                <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+                <div class="address-actions">
+                    <button class="btn btn-sm btn-edit" onclick="editAddress('{{ address.id }}')">Edit</button>
+                    <form method="post" action="{% url 'delete_address' address.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-delete" onclick="return confirm('Are you sure you want to delete this address?')">Delete</button>
+                    </form>
+                    {% if not address.is_default %}
+                    <form method="post" action="{% url 'set_default_address' address.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-default">Set as Default</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-data">
+                <p>No addresses added yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="section orders-section">
+        <h2>My Orders</h2>
+        {% comment %} <div class="orders-grid">
+            {% for order in orders %}
+            <div class="order-card">
+                <div class="order-header">
+                    <h3>Order #{{ order.order_number }}</h3>
+                    <span class="status {{ order.status }}">{{ order.get_status_display }}</span>
+                </div>
+                <div class="order-details">
+                    <p class="date">Ordered on: {{ order.created_at|date:"M d, Y" }}</p>
+                    <p class="total">Total: ₹{{ order.total_amount }}</p>
+                </div>
+                <div class="order-actions">
+                    <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-view">View Details</a>
+                    {% if order.status == 'pending' or order.status == 'processing' %}
+                    <form method="post" action="{% url 'cancel_order' order.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-cancel" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-data">
+                <p>No orders yet.</p>
+            </div>
+            {% endfor %} {% endcomment %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Address Modal -->
+<div id="addAddressModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeAddAddressModal()">&times;</span>
+        <h2>Add New Address</h2>
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="full_name">Full Name *</label>
+                <input type="text" id="full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="address_line1">Address Line 1 *</label>
+                <input type="text" id="address_line1" name="address_line1" required>
+            </div>
+            <div class="form-group">
+                <label for="address_line2">Address Line 2</label>
+                <input type="text" id="address_line2" name="address_line2">
+            </div>
+            <div class="form-group">
+                <label for="city">City *</label>
+                <input type="text" id="city" name="city" required>
+            </div>
+            <div class="form-group">
+                <label for="state">State *</label>
+                <input type="text" id="state" name="state" required>
+            </div>
+            <div class="form-group">
+                <label for="pincode">Pincode *</label>
+                <input type="text" id="pincode" name="pincode" required>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="is_default"> Set as default address
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Address</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.addresses-grid, .orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.address-card, .order-card {
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    position: relative;
+}
+
+.default-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.address-actions, .order-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.status.pending { background: #ffeeba; color: #856404; }
+.status.processing { background: #b8daff; color: #004085; }
+.status.shipped { background: #c3e6cb; color: #155724; }
+.status.delivered { background: #d4edda; color: #155724; }
+.status.cancelled { background: #f5c6cb; color: #721c24; }
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    margin: 10% auto;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.btn-edit { background: #17a2b8; color: white; }
+.btn-delete { background: #dc3545; color: white; }
+.btn-default { background: #6c757d; color: white; }
+.btn-cancel { background: #dc3545; color: white; }
+.btn-view { background: #28a745; color: white; }
+
+@media (max-width: 768px) {
+    .addresses-grid, .orders-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .actions {
+        margin-top: 1rem;
+    }
+}
+</style>
+
+<script>
+function showAddAddressModal() {
+    document.getElementById('addAddressModal').style.display = 'block';
+}
+
+function closeAddAddressModal() {
+    document.getElementById('addAddressModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    if (event.target == document.getElementById('addAddressModal')) {
+        closeAddAddressModal();
+    }
+}
+</script>
+{% endblock %}

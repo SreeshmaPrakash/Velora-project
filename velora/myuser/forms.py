@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 import re
+from django.contrib.auth.forms import PasswordChangeForm
+
 
 User = get_user_model()
 
@@ -136,3 +138,80 @@ class OTPVerificationForm(forms.Form):
             raise forms.ValidationError('OTP must be 4 digits')
         return otp
     
+
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label='Current Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your current password'
+        })
+    )
+    
+    new_password1 = forms.CharField(
+        label='New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter new password'
+        }),
+        help_text="""
+        <ul>
+            <li>Password must be at least 8 characters long</li>
+            <li>Password cannot be similar to your personal information</li>
+            <li>Password cannot be entirely numeric</li>
+            <li>Password cannot be a commonly used password</li>
+        </ul>
+        """
+    )
+    
+    new_password2 = forms.CharField(
+        label='Confirm New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm your new password'
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
+
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise forms.ValidationError("The two password fields didn't match.")
+            
+            # Additional custom password validation
+            if len(new_password1) < 8:
+                raise forms.ValidationError("Password must be at least 8 characters long.")
+            
+            if new_password1.isdigit():
+                raise forms.ValidationError("Password cannot be entirely numeric.")
+
+        return cleaned_data
+
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your first name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your last name'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your email'
+            })
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError('This email is already in use.')
+        return email
