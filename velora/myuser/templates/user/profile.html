@@ -1,526 +1,742 @@
-{% extends 'user/base.html' %}
-{% load static %}
-
-{% block content %}
+{% extends 'user/base.html' %} {% load static %} {% block content %}
 <div class="dashboard-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="user-brief">
-            <div class="user-avatar">
-                <i class="fas fa-user-circle"></i>
-            </div>
-            <div class="user-name">
-                {{ user.first_name }} {{ user.last_name }}
-            </div>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="user-brief">
+      <div class="user-avatar">
+        <i class="fas fa-user-circle"></i>
+      </div>
+      <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a
+        href="javascript:void(0)"
+        onclick="showSection('profile')"
+        class="nav-item {% if active_section == 'profile' %}active{% endif %}"
+      >
+        <i class="fas fa-user"></i> Profile
+      </a>
+      <a
+        href="javascript:void(0)"
+        onclick="showSection('addresses')"
+        class="nav-item {% if active_section == 'addresses' %}active{% endif %}"
+      >
+        <i class="fas fa-map-marker-alt"></i> Addresses
+      </a>
+      <a
+        href="javascript:void(0)"
+        onclick="showSection('orders')"
+        class="nav-item {% if active_section == 'orders' %}active{% endif %}"
+      >
+        <i class="fas fa-shopping-bag"></i> Orders
+      </a>
+      <a
+        href="javascript:void(0)"
+        onclick="showSection('wallet')"
+        class="nav-item {% if active_section == 'wallet' %}active{% endif %}"
+      >
+        <i class="fas fa-wallet"></i> Wallet
+      </a>
+      <a
+        href="javascript:void(0)"
+        onclick="showSection('coupons')"
+        class="nav-item {% if active_section == 'coupons' %}active{% endif %}"
+      >
+        <i class="fas fa-ticket-alt"></i> Coupons
+      </a>
+      <a href="{% url 'userlogout' %}" class="nav-item">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Profile Section -->
+    <div id="profile-section" class="content-section">
+      <h2>My Profile</h2>
+      <div class="profile-info">
+        <div class="info-group">
+          <label>Full Name</label>
+          <p>{{ user.first_name }} {{ user.last_name }}</p>
         </div>
-        <nav class="sidebar-nav">
-            <a href="javascript:void(0)" onclick="showSection('profile')" class="nav-item {% if active_section == 'profile' %}active{% endif %}">
-                <i class="fas fa-user"></i> Profile
-            </a>
-            <a href="javascript:void(0)" onclick="showSection('addresses')" class="nav-item {% if active_section == 'addresses' %}active{% endif %}">
-                <i class="fas fa-map-marker-alt"></i> Addresses
-            </a>
-            <a href="javascript:void(0)" onclick="showSection('orders')" class="nav-item {% if active_section == 'orders' %}active{% endif %}">
-                <i class="fas fa-shopping-bag"></i> Orders
-            </a>
-            <a href="javascript:void(0)" onclick="showSection('wallet')" class="nav-item {% if active_section == 'wallet' %}active{% endif %}">
-                <i class="fas fa-wallet"></i> Wallet
-            </a>
-            <a href="javascript:void(0)" onclick="showSection('coupons')" class="nav-item {% if active_section == 'coupons' %}active{% endif %}">
-                <i class="fas fa-ticket-alt"></i> Coupons
-            </a>
-            <a href="{% url 'userlogout' %}" class="nav-item">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </nav>
+        <div class="info-group">
+          <label>Email</label>
+          <p>{{ user.email }}</p>
+        </div>
+        <div class="info-group">
+          <label>Phone</label>
+          <p>{{ customer.phone }}</p>
+        </div>
+        <a href="{% url 'edit_profile' %}" class="btn btn-primary"
+          >Edit Profile</a
+        >
+      </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Profile Section -->
-        <div id="profile-section" class="content-section">
-            <h2>My Profile</h2>
-            <div class="profile-info">
-                <div class="info-group">
-                    <label>Full Name</label>
-                    <p>{{ user.first_name }} {{ user.last_name }}</p>
-                </div>
-                <div class="info-group">
-                    <label>Email</label>
-                    <p>{{ user.email }}</p>
-                </div>
-                <div class="info-group">
-                    <label>Phone</label>
-                    <p>{{ customer.phone }}</p>
-                </div>
-                <a href="{% url 'edit_profile' %}" class="btn btn-primary">Edit Profile</a>
-            </div>
-        </div>
+    <!-- Addresses Section -->
+    <div id="addresses-section" class="content-section" style="display: none">
+      <div class="section-header">
+        <h2>My Addresses</h2>
+        <button class="btn btn-primary" onclick="showAddAddressModal()">
+          Add New Address
+        </button>
 
-        <!-- Addresses Section -->
-        <div id="addresses-section" class="content-section" style="display: none;">
-            <div class="section-header">
-                <h2>My Addresses</h2>
-                <button class="btn btn-primary" onclick="showAddAddressModal()">Add New Address</button>
-            </div>
-            <div class="addresses-grid">
-                {% for address in addresses %}
-                <div class="address-card {% if address.is_default %}default{% endif %}">
-                    {% if address.is_default %}
-                    <span class="default-badge">Default</span>
-                    {% endif %}
-                    <h3>{{ address.full_name }}</h3>
-                    <p>{{ address.phone }}</p>
-                    <p>{{ address.address_line1 }}</p>
-                    {% if address.address_line2 %}
-                    <p>{{ address.address_line2 }}</p>
-                    {% endif %}
-                    <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
-                    <div class="address-actions">
-                        <button class="btn btn-sm btn-edit">Edit</button>
-                        <button class="btn btn-sm btn-delete">Delete</button>
-                        {% if not address.is_default %}
-                        <button class="btn btn-sm btn-default">Set as Default</button>
-                        {% endif %}
-                    </div>
-                </div>
-                {% empty %}
-                <p>No addresses added yet.</p>
-                {% endfor %}
-            </div>
+      </div>
+      <div class="addresses-grid">
+        {% for address in addresses %}
+        <!-- In the addresses-grid section -->
+        <div class="address-card {% if address.is_default %}default{% endif %}">
+          {% if address.is_default %}
+          <span class="default-badge">Default</span>
+          {% endif %}
+          <h3>{{ address.full_name }}</h3>
+          <p>{{ address.phone }}</p>
+          <p>{{ address.address_line1 }}</p>
+          {% if address.address_line2 %}
+          <p>{{ address.address_line2 }}</p>
+          {% endif %}
+          <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+          <div class="address-actions">
+            <a
+              href="{% url 'edit_address' address.id %}"
+              class="btn btn-sm btn-edit"
+            >
+              <i class="fas fa-edit"></i> Edit
+            </a>
+            <form
+              method="POST"
+              action="{% url 'delete_address' address.id %}"
+              style="display: inline"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="btn btn-sm btn-delete"
+                onclick="return confirm('Are you sure you want to delete this address?')"
+              >
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </form>
+            {% if not address.is_default %}
+            <form
+              method="POST"
+              action="{% url 'set_default_address' address.id %}"
+              style="display: inline"
+            >
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-default">
+                Set as Default
+              </button>
+            </form>
+            {% endif %}
+          </div>
         </div>
+        {% empty %}
+        <p>No addresses added yet.</p>
+        {% endfor %}
+      </div>
+    </div>
 
-        <!-- Orders Section -->
-        <div id="orders-section" class="content-section" style="display: none;">
-            <h2>My Orders</h2>
-            <div class="orders-grid">
-                {% for order in orders %}
-                <div class="order-card">
-                    <div class="order-header">
-                        <h3>Order #{{ order.order_number }}</h3>
-                        <span class="status {{ order.status }}">{{ order.get_status_display }}</span>
-                    </div>
-                    <div class="order-details">
-                        <div>
-                            <div class="label">Order Date</div>
-                            <div class="value">{{ order.created_at|date:"M d, Y" }}</div>
-                        </div>
-                        <div>
-                            <div class="label">Total Amount</div>
-                            <div class="value">₹{{ order.total }}</div>
-                        </div>
-                        <div>
-                            <div class="label">Payment Method</div>
-                            <div class="value">{{ order.payment_method }}</div>
-                        </div>
-                        <div>
-                            <div class="label">Status</div>
-                            <div class="value">{{ order.get_status_display }}</div>
-                        </div>
-                    </div>
-                    <div class="order-actions">
-                        <button class="btn btn-sm btn-primary">View Details</button>
-                        {% if order.status == 'PENDING' %}
-                        <button class="btn btn-sm btn-danger">Cancel Order</button>
-                        {% endif %}
-                    </div>
-                </div>
-                {% empty %}
-                <p>No orders found.</p>
-                {% endfor %}
+    <!-- Orders Section -->
+    <div id="orders-section" class="content-section" style="display: none">
+      <h2>My Orders</h2>
+      <div class="orders-grid">
+        {% for order in orders %}
+        <div class="order-card">
+          <div class="order-header">
+            <h3>Order #{{ order.order_number }}</h3>
+            <span class="status {{ order.status }}"
+              >{{ order.get_status_display }}</span
+            >
+          </div>
+          <div class="order-details">
+            <div>
+              <div class="label">Order Date</div>
+              <div class="value">{{ order.created_at|date:"M d, Y" }}</div>
             </div>
+            <div>
+              <div class="label">Total Amount</div>
+              <div class="value">₹{{ order.total }}</div>
+            </div>
+            <div>
+              <div class="label">Payment Method</div>
+              <div class="value">{{ order.payment_method }}</div>
+            </div>
+            <div>
+              <div class="label">Status</div>
+              <div class="value">{{ order.get_status_display }}</div>
+            </div>
+          </div>
+          <!-- In the order-card section -->
+          <div class="order-actions">
+            <a
+              href="{% url 'order_detail' order.id %}"
+              class="btn btn-sm btn-primary"
+            >
+              <i class="fas fa-eye"></i> View Details
+            </a>
+            {% if order.status == 'PENDING' %}
+            <form
+              method="POST"
+              action="{% url 'cancel_order' order.id %}"
+              style="display: inline"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger"
+                onclick="return confirm('Are you sure you want to cancel this order?')"
+              >
+                <i class="fas fa-times"></i> Cancel Order
+              </button>
+            </form>
+            {% endif %}
+          </div>
         </div>
+        {% empty %}
+        <p>No orders found.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Add Address Modal -->
+<div id="addAddressModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Address</h2>
+            <span class="close" onclick="closeAddAddressModal()">&times;</span>
+        </div>
+        <form method="POST" action="{% url 'add_address' %}" class="address-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <div class="input-group">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" name="full_name" placeholder="Full Name" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-phone input-icon"></i>
+                    <input type="text" name="phone" placeholder="Phone Number" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-home input-icon"></i>
+                    <input type="text" name="address_line1" placeholder="Address Line 1" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-building input-icon"></i>
+                    <input type="text" name="address_line2" placeholder="Address Line 2">
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-city input-icon"></i>
+                    <input type="text" name="city" placeholder="City" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-map input-icon"></i>
+                    <input type="text" name="state" placeholder="State" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-map-pin input-icon"></i>
+                    <input type="text" name="pincode" placeholder="Pincode" required>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Address
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeAddAddressModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <style>
+  .dashboard-container {
+    display: flex;
+    min-height: calc(100vh - 160px);
+    background: #ffffff;
+    margin: 20px auto;
+    max-width: 1400px;
+    position: relative;
+    gap: 30px;
+    padding: 0 20px;
+  }
+
+  /* Sidebar Styles */
+  .sidebar {
+    width: 280px;
+    background: white;
+    padding: 2rem 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    border-radius: 12px;
+  }
+
+  .user-brief {
+    padding: 0 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .user-avatar {
+    width: 80px;
+    height: 80px;
+    background: #f0f0f0;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-avatar i {
+    font-size: 2.5rem;
+    color: #6c757d;
+  }
+
+  .user-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+
+  .nav-item {
+    padding: 1rem 1.5rem;
+    color: #495057;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    margin: 0.2rem 0;
+  }
+
+  .nav-item i {
+    margin-right: 1rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .nav-item:hover {
+    background: rgb(244, 228, 244);
+    color: var(--primary-purple);
+  }
+
+  .nav-item.active {
+    background: var(--primary-purple);
+    color: white;
+    margin: 0.2rem 1rem;
+    border-radius: 8px;
+  }
+
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    padding-right: 20px;
+  }
+
+  .content-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Profile Section */
+  .profile-info {
+    max-width: 600px;
+  }
+
+  .info-group {
+    margin-bottom: 2rem;
+    background: rgb(244, 225, 244);
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+
+  .info-group label {
+    display: block;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .info-group p {
+    font-size: 1.1rem;
+    color: #212529;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  /* Address Section */
+  .addresses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .address-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .address-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .address-card.default {
+    border: 2px solid var(--primary-purple);
+  }
+
+  .default-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--primary-purple);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .address-card h3 {
+    color: #333;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .address-card p {
+    color: #666;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+  }
+
+  .address-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+
+  /* Order Section */
+  .orders-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .order-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .order-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .order-header h3 {
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .order-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .order-details p {
+    margin: 0;
+    color: #666;
+  }
+
+  .order-details .label {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 0.25rem;
+  }
+
+  .order-details .value {
+    font-weight: 500;
+    color: #333;
+  }
+
+  .status {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .status.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .status.processing {
+    background: #cce5ff;
+    color: #004085;
+  }
+  .status.shipped {
+    background: #d4edda;
+    color: #155724;
+  }
+  .status.delivered {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+  .status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .order-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-primary {
+    background: var(--primary-purple);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #5a1e96;
+  }
+
+  .btn-edit {
+    background: #17a2b8;
+    color: white;
+  }
+
+  .btn-delete {
+    background: #dc3545;
+    color: white;
+  }
+
+  .btn-default {
+    background: #6c757d;
+    color: white;
+  }
+
+  /* Section Headers */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin: 0;
+  }
+  /* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #800080 0%, #4b0082 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.close {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.close:hover {
+    color: #f0f0f0;
+}
+
+.modal .address-form {
+    padding: 2rem;
+}
+
+.modal .input-group {
+    margin-bottom: 1.2rem;
+}
+
+.modal .button-group {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
+
+@media (max-width: 576px) {
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .modal .button-group {
+        flex-direction: column;
+    }
+}
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
     .dashboard-container {
-        display: flex;
-        min-height: calc(100vh - 160px);
-        background: #ffffff;
-        margin: 20px auto;
-        max-width: 1400px;
-        position: relative;
-        gap: 30px;
-        padding: 0 20px;
+      flex-direction: column;
+      padding: 1rem;
+      gap: 20px;
     }
-    
-    /* Sidebar Styles */
+
     .sidebar {
-        width: 280px;
-        background: white;
-        padding: 2rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        height: fit-content;
-        position: sticky;
-        top: 20px;
-        border-radius: 12px;
+      width: 100%;
+      position: relative;
+      top: 0;
+      margin-bottom: 1rem;
     }
-    
-    .user-brief {
-        padding: 0 1.5rem;
-        margin-bottom: 2rem;
-        text-align: center;
-    }
-    
-    .user-avatar {
-        width: 80px;
-        height: 80px;
-        background: #f0f0f0;
-        border-radius: 50%;
-        margin: 0 auto 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .user-avatar i {
-        font-size: 2.5rem;
-        color: #6c757d;
-    }
-    
-    .user-name {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-    
-    .nav-item {
-        padding: 1rem 1.5rem;
-        color: #495057;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        transition: all 0.3s ease;
-        margin: 0.2rem 0;
-    }
-    
-    .nav-item i {
-        margin-right: 1rem;
-        width: 20px;
-        text-align: center;
-    }
-    
-    .nav-item:hover {
-        background:rgb(244, 228, 244);
-        color: var(--primary-purple);
-    }
-    
-    .nav-item.active {
-        background: var(--primary-purple);
-        color: white;
-        margin: 0.2rem 1rem;
-        border-radius: 8px;
-    }
-    
-    /* Main Content Area */
+
     .main-content {
-        flex: 1;
-        padding-right: 20px;
+      padding-right: 0;
     }
-    
-    .content-section {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    /* Profile Section */
-    .profile-info {
-        max-width: 600px;
-    }
-    
-    .info-group {
-        margin-bottom: 2rem;
-        background:rgb(244, 225, 244);
-        padding: 1.5rem;
-        border-radius: 8px;
-    }
-    
-    .info-group label {
-        display: block;
-        color: #6c757d;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .info-group p {
-        font-size: 1.1rem;
-        color: #212529;
-        margin: 0;
-        font-weight: 500;
-    }
-    
-    /* Address Section */
+
     .addresses-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
+      grid-template-columns: 1fr;
     }
-    
-    .address-card {
-        background: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 1.5rem;
-        position: relative;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .address-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .address-card.default {
-        border: 2px solid var(--primary-purple);
-    }
-    
-    .default-badge {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: var(--primary-purple);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 500;
-    }
-    
-    .address-card h3 {
-        color: #333;
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-    
-    .address-card p {
-        color: #666;
-        margin-bottom: 0.5rem;
-        line-height: 1.5;
-    }
-    
-    .address-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-    
-    /* Order Section */
-    .orders-grid {
-        display: grid;
-        gap: 1.5rem;
-    }
-    
-    .order-card {
-        background: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .order-card:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .order-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .order-header h3 {
-        color: #333;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
+
     .order-details {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+      grid-template-columns: 1fr;
     }
-    
-    .order-details p {
-        margin: 0;
-        color: #666;
+
+    .order-actions,
+    .address-actions {
+      flex-direction: column;
     }
-    
-    .order-details .label {
-        font-size: 0.9rem;
-        color: #888;
-        margin-bottom: 0.25rem;
-    }
-    
-    .order-details .value {
-        font-weight: 500;
-        color: #333;
-    }
-    
-    .status {
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .status.pending { background: #fff3cd; color: #856404; }
-    .status.processing { background: #cce5ff; color: #004085; }
-    .status.shipped { background: #d4edda; color: #155724; }
-    .status.delivered { background: #d1e7dd; color: #0f5132; }
-    .status.cancelled { background: #f8d7da; color: #721c24; }
-    
-    .order-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-    
-    /* Buttons */
+
     .btn {
-        padding: 0.5rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
+      width: 100%;
+      text-align: center;
     }
-    
-    .btn-sm {
-        padding: 0.25rem 1rem;
-        font-size: 0.875rem;
-    }
-    
-    .btn-primary {
-        background: var(--primary-purple);
-        color: white;
-    }
-    
-    .btn-primary:hover {
-        background: #5a1e96;
-    }
-    
-    .btn-edit {
-        background: #17a2b8;
-        color: white;
-    }
-    
-    .btn-delete {
-        background: #dc3545;
-        color: white;
-    }
-    
-    .btn-default {
-        background: #6c757d;
-        color: white;
-    }
-    
-    /* Section Headers */
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    
-    .section-header h2 {
-        font-size: 1.5rem;
-        color: #333;
-        margin: 0;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .dashboard-container {
-            flex-direction: column;
-            padding: 1rem;
-            gap: 20px;
-        }
-    
-        .sidebar {
-            width: 100%;
-            position: relative;
-            top: 0;
-            margin-bottom: 1rem;
-        }
-    
-        .main-content {
-            padding-right: 0;
-        }
-    
-        .addresses-grid {
-            grid-template-columns: 1fr;
-        }
-    
-        .order-details {
-            grid-template-columns: 1fr;
-        }
-    
-        .order-actions, .address-actions {
-            flex-direction: column;
-        }
-    
-        .btn {
-            width: 100%;
-            text-align: center;
-        }
-    }
-    </style>
+  }
+</style>
 
 <script>
-function showSection(sectionName) {
+  function showSection(sectionName) {
     // Hide all sections
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.style.display = 'none';
+    document.querySelectorAll(".content-section").forEach((section) => {
+      section.style.display = "none";
     });
-    
+
     // Show selected section
-    document.getElementById(sectionName + '-section').style.display = 'block';
-    
+    document.getElementById(sectionName + "-section").style.display = "block";
+
     // Update active nav item
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
+    document.querySelectorAll(".nav-item").forEach((item) => {
+      item.classList.remove("active");
     });
-    event.currentTarget.classList.add('active');
-}
+    event.currentTarget.classList.add("active");
+  }
 
-// Show profile section by default
-document.addEventListener('DOMContentLoaded', function() {
-    showSection('profile');
-});
+  // Show profile section by default
+  document.addEventListener("DOMContentLoaded", function () {
+    showSection("profile");
+  });
 
-// Your existing modal functions
-function showAddAddressModal() {
-    document.getElementById('addAddressModal').style.display = 'block';
-}
+  // Your existing modal functions
+  function showAddAddressModal() {
+    document.getElementById("addAddressModal").style.display = "block";
+  }
 
-function closeAddAddressModal() {
-    document.getElementById('addAddressModal').style.display = 'none';
-}
+  function closeAddAddressModal() {
+    document.getElementById("addAddressModal").style.display = "none";
+  }
 
-// Close modal when clicking outside
-window.onclick = function(event) {
-    if (event.target == document.getElementById('addAddressModal')) {
-        closeAddAddressModal();
+  // Close modal when clicking outside
+  window.onclick = function (event) {
+    if (event.target == document.getElementById("addAddressModal")) {
+      closeAddAddressModal();
     }
-}
+  };
 </script>
 {% endblock %}

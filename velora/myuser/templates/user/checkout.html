@@ -3,45 +3,79 @@
 
 {% block content %}
 <div class="checkout-container">
-    <h2>Checkout</h2>
+    <h2 class="checkout-title">
+        <i class="fas fa-shopping-bag"></i> Checkout
+    </h2>
 
     <div class="checkout-content">
         <!-- Order Summary -->
         <div class="order-summary">
             <div class="card">
                 <div class="card-header">
-                    <h3>Order Summary</h3>
+                    <h3><i class="fas fa-shopping-cart"></i> Order Summary</h3>
                 </div>
                 <div class="card-body">
-                    {% for item in cart_items %}
-                    <div class="cart-item">
-                        <div class="item-image">
-                            {% if item.product.product_images.first %}
-                                <img src="{{ item.product.product_images.first.image.url }}" 
-                                     alt="{{ item.product.name }}">
-                            {% endif %}
+                    <!-- Products List -->
+                    <div class="products-list">
+                        {% for item in cart_items %}
+                        <div class="cart-item">
+                            <div class="item-image">
+                                {% if item.product.product_images.first %}
+                                    <img src="{{ item.product.product_images.first.image.url }}" 
+                                         alt="{{ item.product.name }}">
+                                {% endif %}
+                            </div>
+                            <div class="item-details">
+                                <h4 class="product-name">{{ item.product.name }}</h4>
+                                <div class="product-meta">
+                                    <span class="quantity">
+                                        <i class="fas fa-box"></i> Qty: {{ item.quantity }}
+                                    </span>
+                                </div>
+                                <div class="price-details">
+                                    {% if item.product.discount_price %}
+                                        <div class="price-group">
+                                            <span class="current-price">₹{{ item.product.discount_price }}</span>
+                                            <span class="original-price">₹{{ item.product.price }}</span>
+                                            <span class="discount-badge">
+                                                {{ item.product.discount_percentage }}% OFF
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="current-price">₹{{ item.product.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="item-details">
-                            <h4>{{ item.product.name }}</h4>
-                            <p>Quantity: {{ item.quantity }}</p>
-                            <p class="price">₹{{ item.price }}</p>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
 
-                    <div class="order-totals">
-                        <div class="total-line">
+                    <!-- Price Breakdown -->
+                    <div class="price-breakdown">
+                        <div class="breakdown-item">
                             <span>Subtotal</span>
                             <span>₹{{ subtotal }}</span>
                         </div>
-                        <div class="total-line">
+                        {% if discount_amount %}
+                        <div class="breakdown-item discount">
+                            <span>Discount</span>
+                            <span>-₹{{ discount_amount }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="breakdown-item">
                             <span>Shipping Fee</span>
                             <span>₹{{ shipping_fee }}</span>
                         </div>
-                        <div class="total-line grand-total">
-                            <span>Total</span>
+                        <div class="breakdown-item total">
+                            <span>Total Amount</span>
                             <span>₹{{ total }}</span>
                         </div>
+                    </div>
+
+                    <!-- Delivery Estimate -->
+                    <div class="delivery-estimate">
+                        <i class="fas fa-clock"></i>
+                        Estimated delivery: 3-5 business days
                     </div>
                 </div>
             </div>
@@ -49,167 +83,446 @@
 
         <!-- Checkout Form -->
         <div class="checkout-form">
-            <form method="post">
+            <form method="post" action="{% url 'checkout' %}">
                 {% csrf_token %}
                 
                 <!-- Delivery Address -->
-                <div class="card mb-4">
+                <div class="card">
                     <div class="card-header">
-                        <h3>Delivery Address</h3>
+                        <h3><i class="fas fa-map-marker-alt"></i> Delivery Address</h3>
+                        <a href="{% url 'add_address' %}" class="add-address-btn">
+                            <i class="fas fa-plus"></i> Add New Address
+                        </a>
                     </div>
                     
-<div class="card-body">
-    {% if addresses %}
-        {% for address in addresses %}
-        <div class="address-option">
-            <input type="radio" name="address" id="address_{{ address.id }}" 
-                   value="{{ address.id }}" required>
-            <label for="address_{{ address.id }}">
-                <strong>{{ address.full_name }}</strong>
-                <p>{{ address.address_line1 }}</p>
-                {% if address.address_line2 %}
-                    <p>{{ address.address_line2 }}</p>
-                {% endif %}
-                <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
-                <p>Phone: {{ address.phone }}</p>
-            </label>
-        </div>
-        {% endfor %}
-    {% else %}
-        <p>No saved addresses. <a href="{% url 'add_address'%}">Add a new address</a></p>
-    {% endif %}
-</div>
+                    <div class="card-body">
+                        <div class="saved-addresses">
+                            {% if addresses %}
+                                {% for address in addresses %}
+                                <div class="address-option">
+                                    <input type="radio" name="address" id="address_{{ address.id }}" 
+                                           value="{{ address.id }}" required>
+                                    <label for="address_{{ address.id }}">
+                                        <div class="address-content">
+                                            <strong>{{ address.full_name }}</strong>
+                                            <p>{{ address.address_line1 }}</p>
+                                            {% if address.address_line2 %}
+                                                <p>{{ address.address_line2 }}</p>
+                                            {% endif %}
+                                            <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+                                            <p>Phone: {{ address.phone }}</p>
+                                        </div>
+                                        <div class="address-actions">
+                                            <a href="{% url 'edit_address' address.id %}" class="edit-btn">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_address' address.id %}" class="delete-btn" 
+                                               onclick="return confirm('Are you sure you want to delete this address?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-address">
+                                    <i class="fas fa-home"></i>
+                                    <p>No saved addresses. Please add a new address to continue.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Payment Method -->
-                <div class="card mb-4">
+                <div class="card payment-card">
                     <div class="card-header">
-                        <h3>Payment Method</h3>
+                        <h3><i class="fas fa-credit-card"></i> Payment Method</h3>
                     </div>
                     <div class="card-body">
                         <div class="payment-options">
                             <div class="payment-option">
                                 <input type="radio" name="payment_method" id="cod" value="COD" required>
-                                <label for="cod">Cash on Delivery</label>
+                                <label for="cod">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Cash on Delivery
+                                    <span class="payment-description">Pay when you receive your order</span>
+                                </label>
                             </div>
-                            <!-- Add more payment options as needed -->
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" class="place-order-btn">Place Order</button>
+                <button type="submit" class="place-order-btn">
+                    <i class="fas fa-shopping-cart"></i> Place Order
+                </button>
             </form>
         </div>
     </div>
 </div>
 
 <style>
-    .checkout-container {
-        max-width: 1200px;
-        margin: 2rem auto;
-        padding: 0 20px;
-    }
+/* Main Container Styles */
+.checkout-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 20px;
+    font-family: 'Poppins', sans-serif;
+}
 
+.checkout-title {
+    color: #333;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkout-content {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+}
+
+/* Card Styles */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-purple) 0%, #9c27b0 100%);
+    color: white;
+    padding: 1.2rem;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.3rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Product List Styles */
+.products-list {
+    margin-bottom: 1.5rem;
+}
+
+.cart-item {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.2rem;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.cart-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.item-image {
+    flex-shrink: 0;
+}
+
+.item-image img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.item-details {
+    flex: 1;
+}
+
+.product-name {
+    font-size: 1.1rem;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+}
+
+.product-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Price Styles */
+.price-details {
+    margin-top: 0.5rem;
+}
+
+.price-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.current-price {
+    font-size: 1.3rem;
+    color: var(--primary-purple);
+    font-weight: bold;
+}
+
+.original-price {
+    color: #666;
+    text-decoration: line-through;
+    font-size: 0.9rem;
+}
+
+.discount-badge {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Price Breakdown Styles */
+.price-breakdown {
+    background: #f8f9fa;
+    padding: 1.2rem;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem 0;
+    color: #666;
+}
+
+.breakdown-item.discount {
+    color: #2e7d32;
+}
+
+.breakdown-item.total {
+    border-top: 2px dashed #ddd;
+    margin-top: 0.8rem;
+    padding-top: 1rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+/* Delivery Estimate */
+.delivery-estimate {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    color: #666;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Address Styles */
+.address-option {
+    border: 2px solid #eee;
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.address-option:hover {
+    border-color: var(--primary-purple);
+    transform: translateX(5px);
+}
+
+.address-content {
+    margin-left: 2rem;
+}
+
+.address-content p {
+    margin: 0.3rem 0;
+    color: #666;
+}
+
+.address-actions {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.edit-btn, .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s ease;
+    padding: 5px;
+}
+
+.edit-btn:hover {
+    color: var(--primary-purple);
+}
+
+.delete-btn:hover {
+    color: #dc3545;
+}
+
+/* Add Address Button */
+.add-address-btn {
+    background: white;
+    color: var(--primary-purple);
+    border: 2px solid var(--primary-purple);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.add-address-btn:hover {
+    background: var(--primary-purple);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Payment Method Styles */
+.payment-option {
+    background: #fff;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+    border-color: var(--primary-purple);
+}
+
+.payment-option label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.payment-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-left: 1rem;
+}
+
+/* Place Order Button */
+.place-order-btn {
+    background: linear-gradient(135deg, var(--primary-purple) 0%, #9c27b0 100%);
+    color: white;
+    padding: 1.2rem;
+    border: none;
+    border-radius: 8px;
+    width: 100%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1.5rem;
+}
+
+.place-order-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* No Address Message */
+.no-address {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.no-address i {
+    font-size: 2rem;
+    color: #999;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
     .checkout-content {
-        display: grid;
-        grid-template-columns: 1fr 1.5fr;
-        gap: 2rem;
+        grid-template-columns: 1fr;
     }
+}
 
-    .card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-
-    .card-header {
-        background-color: var(--primary-purple);
-        color: white;
-        padding: 1rem;
-        border-radius: 8px 8px 0 0;
-    }
-
-    .card-body {
-        padding: 1rem;
-    }
-
+@media (max-width: 768px) {
     .cart-item {
-        display: flex;
-        gap: 1rem;
-        padding: 1rem 0;
-        border-bottom: 1px solid #eee;
+        flex-direction: column;
     }
-
+    
     .item-image img {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 4px;
-    }
-
-    .item-details {
-        flex: 1;
-    }
-
-    .order-totals {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-
-    .total-line {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 0.5rem;
-    }
-
-    .grand-total {
-        font-weight: bold;
-        font-size: 1.2rem;
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 2px solid #eee;
-    }
-
-    .address-option {
-        padding: 1rem;
-        border: 1px solid #eee;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-
-    .address-option input[type="radio"] {
-        margin-right: 1rem;
-    }
-
-    .payment-option {
-        padding: 1rem;
-        border: 1px solid #eee;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-
-    .place-order-btn {
-        background-color: var(--primary-purple);
-        color: white;
-        padding: 1rem 2rem;
-        border: none;
-        border-radius: 4px;
         width: 100%;
+        height: 200px;
+    }
+    
+    .price-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .address-actions {
+        position: static;
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .checkout-title {
+        font-size: 1.5rem;
+    }
+    
+    .card-header h3 {
         font-size: 1.1rem;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
     }
-
-    .place-order-btn:hover {
-        background-color: var(--dark-purple);
+    
+    .breakdown-item.total {
+        font-size: 1.1rem;
     }
-
-    @media (max-width: 768px) {
-        .checkout-content {
-            grid-template-columns: 1fr;
-        }
-    }
+}
 </style>
 {% endblock %}

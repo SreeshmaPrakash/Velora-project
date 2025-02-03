@@ -1,0 +1,224 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="address-card">
+        <div class="card-header">
+            <h3><i class="fas fa-map-marker-alt"></i> Edit Address</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" class="address-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <div class="input-group">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" name="full_name" placeholder="Full Name" 
+                               value="{{ address.full_name }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-phone input-icon"></i>
+                        <input type="text" name="phone" placeholder="Phone Number" 
+                               value="{{ address.phone }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-home input-icon"></i>
+                        <input type="text" name="address_line1" placeholder="Address Line 1" 
+                               value="{{ address.address_line1 }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-building input-icon"></i>
+                        <input type="text" name="address_line2" placeholder="Address Line 2" 
+                               value="{{ address.address_line2 }}">
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-city input-icon"></i>
+                        <input type="text" name="city" placeholder="City" 
+                               value="{{ address.city }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-map input-icon"></i>
+                        <input type="text" name="state" placeholder="State" 
+                               value="{{ address.state }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fas fa-map-pin input-icon"></i>
+                        <input type="text" name="pincode" placeholder="Pincode" 
+                               value="{{ address.pincode }}" required>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{% url 'profile' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+.address-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #800080 0%, #4b0082 100%);
+    color: white;
+    padding: 1.5rem;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.address-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 1.1rem;
+}
+
+input {
+    width: 100%;
+    padding: 12px 20px 12px 45px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    border-color: #800080;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(128,0,128,0.1);
+}
+
+input::placeholder {
+    color: #999;
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: #800080;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #660066;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-secondary {
+    background: #f8f9fa;
+    color: #333;
+    border: 2px solid #e0e0e0;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 576px) {
+    .container {
+        margin: 1rem auto;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+
+/* Optional: Add animation for form submission feedback */
+@keyframes submitPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+.btn-primary:active {
+    animation: submitPulse 0.3s ease;
+}
+</style>
+{% endblock %}

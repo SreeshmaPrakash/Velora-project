@@ -220,6 +220,8 @@ def product_list(request):
     }
     
     return render(request, 'user/product_list.html', context)
+
+
 @never_cache
 @login_required(login_url='userlogin')
 def product_detail(request, product_id):
@@ -494,30 +496,22 @@ def set_default_address(request, address_id):
     return redirect('profile')
 
 
-@login_required(login_url='userlogin')
+@login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    order_items = order.orderitem_set.all().select_related('product')
-    
-    context = {
-        'order': order,
-        'order_items': order_items,
-        'shipping_address': order.shipping_address,
-        'billing_address': order.billing_address,
-    }
-    return render(request, 'user/order_detail.html', context)
+    return render(request, 'user/order_detail.html', {'order': order})
 
 
-@login_required(login_url='userlogin')
+@login_required
 def cancel_order(request, order_id):
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id, user=request.user)
-        if order.status in ['pending', 'processing']:
-            order.status = 'cancelled'
+        if order.status == 'PENDING':
+            order.status = 'CANCELLED'
             order.save()
-            messages.success(request, 'Order cancelled successfully!')
+            messages.success(request, 'Order cancelled successfully')
         else:
-            messages.error(request, 'This order cannot be cancelled.')
+            messages.error(request, 'Order cannot be cancelled at this stage')
     return redirect('profile')
 
 
@@ -534,13 +528,23 @@ def view_cart(request):
                 'product__images'
             ).all()
         
+        # Shipping charge configuration
+        SHIPPING_CHARGE = 40  # Fixed shipping charge
+        
+        # Calculate subtotal
         subtotal = sum(item.quantity * item.price for item in cart_items)
-        total = subtotal - getattr(cart, 'discount', 0)
+        
+        # Apply discount if exists
+        discount = getattr(cart, 'discount', 0)
+        
+        # Calculate total with shipping
+        total = subtotal - discount + SHIPPING_CHARGE
         
         context = {
             'cart_items': cart_items,
             'subtotal': subtotal,
-            'discount': getattr(cart, 'discount', 0),
+            'discount': discount,
+            'shipping': SHIPPING_CHARGE,
             'total': total
         }
         return render(request, 'user/cart.html', context)
@@ -550,13 +554,46 @@ def view_cart(request):
             'cart_items': [],
             'subtotal': 0,
             'discount': 0,
+            'shipping': 0,
             'total': 0
         }
         return render(request, 'user/cart.html', context)
     except Exception as e:
         messages.error(request, f'Error viewing cart: {str(e)}')
         return redirect('userhome')
+    
+    
+@login_required(login_url='userlogin')
+def update_cart(request, item_id):
+    if request.method == 'POST':
+        try:
+            cart_item = CartItem.objects.get(id=item_id, cart__user=request.user)
+            quantity = int(request.POST.get('quantity', 1))
 
+            if 1 <= quantity <= 4:
+                cart_item.quantity = quantity
+                cart_item.save()
+
+                cart = cart_item.cart
+                cart_items = CartItem.objects.filter(cart=cart)
+                subtotal = sum(item.quantity * item.price for item in cart_items)
+
+                return JsonResponse({
+                    'status': 'success',
+                    'cart_count': cart_items.count(),
+                    'subtotal': subtotal
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Quantity must be between 1 and 4'
+                })
+        except CartItem.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Cart item not found'
+            })
+    return redirect('cart')
 
 @login_required(login_url='userlogin') 
 def add_to_cart(request, product_id):
@@ -624,55 +661,6 @@ def add_to_cart(request, product_id):
         'message': 'Invalid request method'
     })
 
-@login_required(login_url='userlogin') 
-def update_cart(request, item_id):
-    if request.method == 'POST':
-        try:
-            cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-            quantity = int(request.POST.get('quantity', 1))
-            
-            if quantity > 0:
-                if quantity > cart_item.product.stock:
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'Not enough stock available'
-                    }) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('view_cart')
-                
-                cart_item.quantity = quantity
-                cart_item.save()
-                messages.success(request, 'Cart updated successfully!')
-            else:
-                cart_item.delete()
-                messages.success(request, 'Product removed from cart!')
-                
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                cart = cart_item.cart
-                cart_items = cart.items.all()
-                subtotal = sum(item.quantity * item.price for item in cart_items)
-                total = subtotal - cart.discount
-                
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Cart updated successfully!',
-                    'subtotal': float(subtotal),
-                    'discount': float(cart.discount),
-                    'total': float(total),
-                    'cart_count': cart.items.count()
-                })
-            return redirect('view_cart')
-            
-        except Exception as e:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'status': 'error',
-                    'message': str(e)
-                })
-            messages.error(request, f'Error updating cart: {str(e)}')
-            return redirect('view_cart')
-    
-    return redirect('view_cart')
-
-
 
 @login_required(login_url='userlogin') 
 def remove_from_cart(request, item_id):
@@ -719,7 +707,7 @@ def checkout(request):
         
         # Calculate totals
         subtotal = sum(item.quantity * item.price for item in cart_items)
-        shipping_fee = Decimal('40.00') if subtotal > Decimal('500.00') else Decimal('0.00')
+        shipping_fee = Decimal('40.00') 
         total = subtotal + shipping_fee
         
         if request.method == 'POST':
@@ -795,61 +783,34 @@ def checkout(request):
         return redirect('view_cart')
     
 @login_required
-def add_address(request):
-    if request.method == 'POST':
-        try:
-            # Get form data
-            full_name = request.POST.get('full_name')
-            phone = request.POST.get('phone')
-            address_line1 = request.POST.get('address_line1')
-            address_line2 = request.POST.get('address_line2')
-            city = request.POST.get('city')
-            state = request.POST.get('state')
-            pincode = request.POST.get('pincode')
-            is_default = request.POST.get('is_default') == 'on'
-
-            # Validate required fields
-            if not all([full_name, phone, address_line1, city, state, pincode]):
-                messages.error(request, 'Please fill all required fields')
-                return redirect('add_address')
-
-            # If this is the first address or set as default
-            if is_default:
-                # Set all other addresses as non-default
-                Address.objects.filter(user=request.user).update(is_default=False)
-
-            # Create new address
-            Address.objects.create(
-                user=request.user,
-                full_name=full_name,
-                phone=phone,
-                address_line1=address_line1,
-                address_line2=address_line2,
-                city=city,
-                state=state,
-                pincode=pincode,
-                is_default=is_default
-            )
-
-            messages.success(request, 'Address added successfully')
-            return redirect('checkout')  # or wherever you want to redirect
-
-        except Exception as e:
-            messages.error(request, f'Error adding address: {str(e)}')
-            return redirect('add_address')
-
-    return render(request, 'user/add_address.html')
-
-@login_required
 def manage_addresses(request):
     addresses = Address.objects.filter(user=request.user, is_deleted=False)
     return render(request, 'user/manage_addresses.html', {'addresses': addresses})
 
 @login_required
+def add_address(request):
+    if request.method == 'POST':
+        try:
+            Address.objects.create(
+                user=request.user,
+                full_name=request.POST.get('full_name'),
+                phone=request.POST.get('phone'),
+                address_line1=request.POST.get('address_line1'),
+                address_line2=request.POST.get('address_line2'),
+                city=request.POST.get('city'),
+                state=request.POST.get('state'),
+                pincode=request.POST.get('pincode')
+            )
+            messages.success(request, 'Address added successfully')
+            return redirect('checkout')
+        except Exception as e:
+            messages.error(request, f'Error adding address: {str(e)}')
+    return render(request, 'user/add_address.html')
+
+@login_required
 def edit_address(request, address_id):
     try:
-        address = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
-        
+        address = Address.objects.get(id=address_id, user=request.user)
         if request.method == 'POST':
             address.full_name = request.POST.get('full_name')
             address.phone = request.POST.get('phone')
@@ -858,46 +819,33 @@ def edit_address(request, address_id):
             address.city = request.POST.get('city')
             address.state = request.POST.get('state')
             address.pincode = request.POST.get('pincode')
-            is_default = request.POST.get('is_default') == 'on'
-
-            if is_default:
-                Address.objects.filter(user=request.user).update(is_default=False)
-                address.is_default = True
-
             address.save()
             messages.success(request, 'Address updated successfully')
-            return redirect('manage_addresses')
-
-        return render(request, 'user/edit_address.html', {'address': address})
-
+            return redirect('checkout')
+        return render(request, 'user/add_address.html', {'address': address})
     except Address.DoesNotExist:
         messages.error(request, 'Address not found')
-        return redirect('manage_addresses')
+        return redirect('checkout')
 
 @login_required
 def delete_address(request, address_id):
     try:
-        address = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
-        address.is_deleted = True
-        address.save()
+        address = Address.objects.get(id=address_id, user=request.user)
+        address.delete()
         messages.success(request, 'Address deleted successfully')
     except Address.DoesNotExist:
         messages.error(request, 'Address not found')
-    return redirect('manage_addresses')
+    return redirect('checkout')
 
 
 @login_required
 def order_confirmation(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id, user=request.user)
-        context = {
-            'order': order,
-            'order_items': order.items.all()
-        }
-        return render(request, 'user/order_confirmation.html', context)
-    except Order.DoesNotExist:
-        messages.error(request, 'Order not found')
-        return redirect('view_cart')
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    context = {
+        'order': order,
+        'shipping_address': order.shipping_address, 
+    }
+    return render(request, 'user/order_confirmation.html', context)
     
 
 

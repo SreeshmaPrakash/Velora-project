@@ -12,6 +12,7 @@
                 <i class="fas fa-check-circle"></i>
                 <h3>Thank You for Your Order!</h3>
                 <p>Order Number: {{ order.order_number }}</p>
+                <p class="order-date">Order Date: {{ order.created_at|date:"F d, Y" }}</p>
             </div>
 
             <div class="order-details">
@@ -19,10 +20,23 @@
                 <div class="order-items">
                     {% for item in order_items %}
                     <div class="order-item">
+                        <div class="item-image">
+                            {% if item.product.product_images.first %}
+                                <img src="{{ item.product.product_images.first.image.url }}" 
+                                     alt="{{ item.product.name }}">
+                            {% endif %}
+                        </div>
                         <div class="item-details">
                             <h5>{{ item.product.name }}</h5>
                             <p>Quantity: {{ item.quantity }}</p>
-                            <p class="price">₹{{ item.price }}</p>
+                            <div class="price-details">
+                                {% if item.product.discount_price %}
+                                    <span class="current-price">₹{{ item.product.discount_price }}</span>
+                                    <span class="original-price">₹{{ item.product.price }}</span>
+                                {% else %}
+                                    <span class="current-price">₹{{ item.product.price }}</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -33,6 +47,12 @@
                         <span>Subtotal:</span>
                         <span>₹{{ order.subtotal }}</span>
                     </div>
+                    {% if order.discount_amount %}
+                    <div class="summary-line discount">
+                        <span>Discount:</span>
+                        <span>-₹{{ order.discount_amount }}</span>
+                    </div>
+                    {% endif %}
                     <div class="summary-line">
                         <span>Shipping:</span>
                         <span>₹{{ order.shipping_fee }}</span>
@@ -44,16 +64,27 @@
                 </div>
 
                 <div class="shipping-info">
-                    <h4>Shipping Information</h4>
-                    <p>{{ order.shipping_address }}</p>
-                    <p>{{ order.shipping_city }}, {{ order.shipping_state }} - {{ order.shipping_pincode }}</p>
-                    <p>Phone: {{ order.shipping_phone }}</p>
+                    <h3>Shipping Information</h3>
+                    <div class="info-details">
+                        <p><strong>Name:</strong> {{ order.full_name }}</p>
+                        <p><strong>Address:</strong> 
+                            {{ order.address_line1 }}
+                            {% if order.address_line2 %}
+                                <br>{{ order.address_line2 }}
+                            {% endif %}
+                        </p>
+                        <p><strong>City:</strong> {{ order.city }}</p>
+                        <p><strong>State:</strong> {{ order.state }}</p>
+                        <p><strong>Pincode:</strong> {{ order.pincode }}</p>
+                        <p><strong>Phone:</strong> {{ order.phone }}</p>
+                    </div>
                 </div>
+                
             </div>
 
             <div class="action-buttons">
                 <a href="{% url 'userhome' %}" class="btn btn-primary">Continue Shopping</a>
-                <a href="" class="btn btn-secondary">View My Orders</a>
+                <a href="{% url 'my_orders' %}" class="btn btn-secondary">View My Orders</a>
             </div>
         </div>
     </div>
@@ -64,6 +95,23 @@
     max-width: 800px;
     margin: 2rem auto;
     padding: 0 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: var(--primary-purple);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+}
+
+.card-body {
+    padding: 2rem;
 }
 
 .success-message {
@@ -77,13 +125,59 @@
     margin-bottom: 1rem;
 }
 
+.order-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
 .order-details {
     margin-top: 2rem;
 }
 
 .order-item {
+    display: flex;
+    gap: 1rem;
     padding: 1rem 0;
     border-bottom: 1px solid #eee;
+}
+
+.item-image img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.item-details {
+    flex: 1;
+}
+
+.price-details {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0.5rem;
+}
+
+.current-price {
+    font-size: 1.1rem;
+    color: #800080;
+    font-weight: bold;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.discount-badge {
+    background-color: #e8f5e9;
+    color: #28a745;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
 .order-summary {
@@ -99,6 +193,10 @@
     margin-bottom: 0.5rem;
 }
 
+.summary-line.discount {
+    color: #28a745;
+}
+
 .summary-line.total {
     font-weight: bold;
     font-size: 1.2rem;
@@ -108,10 +206,32 @@
 }
 
 .shipping-info {
-    margin-top: 2rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.shipping-info h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.info-details {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.info-details p {
+    margin: 0;
+    color: #555;
+}
+
+.info-details strong {
+    color: #333;
+    display: inline-block;
+    width: 100px;
 }
 
 .action-buttons {
@@ -122,15 +242,21 @@
 }
 
 .btn {
-    padding: 0.5rem 1.5rem;
+    padding: 0.75rem 1.5rem;
     border-radius: 4px;
     text-decoration: none;
     font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
 }
 
 .btn-primary {
-    background-color: var(--primary-purple);
+    background-color: #800080;
     color: white;
+}
+
+.btn-primary:hover {
+    background-color: #660066;
 }
 
 .btn-secondary {
@@ -138,14 +264,30 @@
     color: white;
 }
 
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
 @media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+
+    .order-item {
+        flex-direction: column;
+    }
+
+    .item-image img {
+        width: 100%;
+        height: 200px;
+    }
+
     .action-buttons {
         flex-direction: column;
     }
     
     .btn {
         width: 100%;
-        text-align: center;
         margin-bottom: 0.5rem;
     }
 }
