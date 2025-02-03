@@ -8,3 +8,4 @@ def chunkify(value, chunk_size):
     if value is None:
         return []
     return [value[i:i + chunk_size] for i in range(0, len(value), chunk_size)]
+

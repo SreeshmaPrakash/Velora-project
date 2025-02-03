@@ -3,106 +3,149 @@
 
 {% block content %}
 <div class="cart-container">
-    <h1>Shopping Cart</h1>
+    <div class="cart-header">
+        <h1>Shopping Cart</h1>
+        <span class="item-count">{{ cart_items|length }} item(s)</span>
+    </div>
 
     {% if messages %}
     <div class="messages">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        <div class="alert alert-{{ message.tags }} fade-out">{{ message }}</div>
         {% endfor %}
     </div>
     {% endif %}
 
     {% if cart_items %}
-    <div class="cart-items">
-        {% for item in cart_items %}
-        <div class="cart-item" data-item-id="{{ item.id }}" data-price="{{ item.price }}">
-            <div class="item-image">
-                {% if item.product.product_images.first %}
-                    <img src="{{ item.product.product_images.first.image.url }}" 
-                         alt="{{ item.product.name }}"
-                         style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px;">
-                {% else %}
-                    <div class="no-image-placeholder"
-                         style="width: 150px; 
-                                height: 150px; 
-                                background-color: #f5f5f5;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                border-radius: 8px;">
-                        <span>No Image</span>
+    <div class="cart-layout">
+        <div class="cart-items">
+            {% for item in cart_items %}
+            <div class="cart-item" data-item-id="{{ item.id }}" data-price="{{ item.price }}">
+                <div class="item-image">
+                    {% if item.product.product_images.first %}
+                        <img src="{{ item.product.product_images.first.image.url }}" 
+                             alt="{{ item.product.name }}">
+                    {% else %}
+                        <div class="no-image-placeholder">
+                            <span>No Image</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="item-details">
+                    <div class="item-header">
+                        <h3>{{ item.product.name }}</h3>
+                        <div class="item-price">₹{{ item.price }}</div>
                     </div>
-                {% endif %}
-            </div>
-            
-            <div class="item-details">
-                <h3>{{ item.product.name }}</h3>
-                <p class="price">₹{{ item.price }}</p>
-                <div class="quantity-controls">
-                    <form method="post" action="{% url 'update_cart' item.id %}" class="update-form">
+                    
+                    <div class="item-controls">
+                        <div class="quantity-controls">
+                            <form method="post" action="{% url 'update_cart' item.id %}" class="update-form">
+                                {% csrf_token %}
+                                <button type="button" class="qty-btn minus">−</button>
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="4" class="quantity-input" readonly>
+                                <button type="button" class="qty-btn plus">+</button>
+                            </form>
+                        </div>
+                        <div class="item-subtotal">
+                            Subtotal: <span class="amount">₹{{ item.get_cost }}</span>
+                        </div>
+                    </div>
+                    
+                    <form method="post" action="{% url 'remove_from_cart' item.id %}" class="remove-form">
                         {% csrf_token %}
-                        <button type="button" class="qty-btn minus">-</button>
-                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="4" class="quantity-input" readonly>
-                        <button type="button" class="qty-btn plus">+</button>
+                        <button type="submit" class="remove-btn">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
                     </form>
                 </div>
-                <p class="subtotal">Subtotal: ₹<span class="item-subtotal">{{ item.get_cost }}</span></p>
-                <form method="post" action="{% url 'remove_from_cart' item.id %}" class="remove-form">
-                    {% csrf_token %}
-                    <button type="submit" class="remove-btn">Remove</button>
-                </form>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
 
-    <div class="cart-summary">
-        <h2>Order Summary</h2>
-        <div class="summary-item">
-            <span>Items ({{ cart_items|length }})</span>
-            <span class="cart-subtotal">₹{{ subtotal }}</span>
+        <div class="cart-summary">
+            <h2>Order Summary</h2>
+            <div class="summary-items">
+                <div class="summary-item">
+                    <span>Subtotal</span>
+                    <span class="cart-subtotal">₹{{ subtotal }}</span>
+                </div>
+                {% if discount %}
+                <div class="summary-item discount">
+                    <span>Discount</span>
+                    <span class="discount-amount">-₹{{ discount }}</span>
+                </div>
+                {% endif %}
+                <div class="summary-item shipping">
+                    <span>Shipping</span>
+                    <span class="shipping-amount">₹40</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Total Amount</span>
+                    <span class="cart-total">₹{{ total }}</span>
+                </div>
+            </div>
+            <a href="{% url 'checkout' %}" class="checkout-btn">
+                <i class="fas fa-lock"></i> Proceed to Checkout
+            </a>
+            <a href="{% url 'products' %}" class="continue-shopping-btn">
+                <i class="fas fa-arrow-left"></i> Continue Shopping
+            </a>
         </div>
-        {% if discount %}
-        <div class="summary-item discount">
-            <span>Discount</span>
-            <span class="discount-amount">-₹{{ discount }}</span>
-        </div>
-        {% endif %}
-        <div class="summary-item shipping">
-            <span>Shipping</span>
-            <span class="shipping-amount">₹0</span>
-        </div>
-        <div class="summary-item total">
-            <span>Total Amount</span>
-            <span class="cart-total">₹{{ total }}</span>
-        </div>
-        <a href="{% url 'checkout' %}" class="checkout-btn">Proceed to Checkout</a>
     </div>
     {% else %}
     <div class="empty-cart">
-        <img src="{% static 'images/empty_cart.jpg' %}" alt="Empty Cart">
-        <h2>Your cart is empty</h2>
-        <p>Looks like you haven't added anything to your cart yet.</p>
-        <a href="{% url 'products' %}" class="continue-shopping">Continue Shopping</a>
+        <div class="empty-cart-content">
+            <img src="{% static 'images/empty_cart.jpg' %}" alt="Empty Cart">
+            <h2>Your cart is empty</h2>
+            <p>Looks like you haven't added anything to your cart yet.</p>
+            <a href="{% url 'products' %}" class="continue-shopping-btn">
+                <i class="fas fa-shopping-bag"></i> Start Shopping
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>
 
 <style>
-    .cart-container {
-        max-width: 900px;  
-        margin: 2rem auto;
-        padding: 0 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
+/* Main Container */
+.cart-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 20px;
 }
 
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.cart-header h1 {
+    color: #333;
+    margin: 0;
+}
+
+.item-count {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+/* Cart Layout */
+.cart-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+}
+
+/* Cart Items */
 .cart-items {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 .cart-item {
@@ -110,100 +153,107 @@
     gap: 2rem;
     padding: 1.5rem;
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .item-image {
-    width: 150px;
-    height: 150px;
-    overflow: hidden;
+    width: 120px;
+    height: 120px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
-.no-image-placeholder {
-    width: 150px;
-    height: 150px;
-    background-color: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
+.item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .item-details {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    justify-content: space-between;
 }
 
-.item-details h3 {
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.item-header h3 {
     margin: 0;
     color: #333;
+    font-size: 1.2rem;
 }
 
-.price {
-    font-size: 1.1rem;
-    color: #666;
-    margin: 0;
+.item-price {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2ecc71;
 }
 
+.item-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Quantity Controls */
 .quantity-controls {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-}
-
-.quantity-input {
-    width: 60px;
-    text-align: center;
+    background: #f8f9fa;
     padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .qty-btn {
     width: 30px;
     height: 30px;
     border: none;
-    background: #f0f0f0;
-    border-radius: 4px;
+    background: white;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: all 0.2s ease;
 }
 
 .qty-btn:hover {
-    background: #e0e0e0;
+    background: #eee;
 }
 
-.remove-btn {
-    background: #dc3545;
-    color: white;
+.quantity-input {
+    width: 50px;
+    text-align: center;
     border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    align-self: flex-start;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 500;
 }
 
-.remove-btn:hover {
-    background: #c82333;
-}
-
+/* Cart Summary */
 .cart-summary {
     background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     height: fit-content;
     position: sticky;
     top: 2rem;
-    max-width: 400px;
-    margin-left: auto;  /* This will align it to the right */
-    margin-right: 0;
+}
+
+.summary-items {
+    margin: 1.5rem 0;
 }
 
 .summary-item {
@@ -213,65 +263,76 @@
     color: #666;
 }
 
-.total {
-    font-weight: bold;
+.summary-item.total {
     font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
     border-top: 2px solid #eee;
     padding-top: 1rem;
     margin-top: 1rem;
-    color: #333;
 }
 
-.checkout-btn {
+.checkout-btn, .continue-shopping-btn {
     display: block;
     width: 100%;
     padding: 1rem;
-    background: #28a745;
-    color: white;
     text-align: center;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
     text-decoration: none;
-    border-radius: 4px;
-    margin-top: 1.5rem;
-    transition: background-color 0.2s;
+}
+
+.checkout-btn {
+    background: #800080;
+    color: white;
+    margin-bottom: 1rem;
 }
 
 .checkout-btn:hover {
-    background: #218838;
+    background: #660066;
 }
 
+.continue-shopping-btn {
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.continue-shopping-btn:hover {
+    background: #eee;
+}
+
+/* Empty Cart */
 .empty-cart {
     text-align: center;
-    padding: 3rem;
-    grid-column: 1 / -1;
+    padding: 4rem 2rem;
 }
 
 .empty-cart img {
     max-width: 200px;
+    margin-bottom: 2rem;
+}
+
+.empty-cart h2 {
+    color: #333;
     margin-bottom: 1rem;
 }
 
-.continue-shopping {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: rgb(143, 33, 143);
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    margin-top: 1rem;
-    transition: background-color 0.2s;
+.empty-cart p {
+    color: #666;
+    margin-bottom: 2rem;
 }
 
-.continue-shopping:hover {
-    background: rgb(123, 28, 123);
-}
-
-@media (max-width: 968px) {
-    .cart-container {
+/* Responsive Design */
+@media (max-width: 992px) {
+    .cart-layout {
         grid-template-columns: 1fr;
     }
     
     .cart-summary {
         position: static;
+        margin-top: 2rem;
     }
 }
 
@@ -282,13 +343,44 @@
         text-align: center;
     }
     
-    .item-details {
-        align-items: center;
+    .item-controls {
+        flex-direction: column;
+        gap: 1rem;
     }
     
-    .remove-btn {
-        align-self: center;
+    .item-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
     }
+}
+
+/* Alert Messages */
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.fade-out {
+    animation: fadeOut 3s forwards;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
 }
 </style>
 

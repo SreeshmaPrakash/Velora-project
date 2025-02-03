@@ -247,11 +247,11 @@
                             <a class="nav-link {% if request.resolver_match.url_name == 'customers' %}active{% endif %}" href="{% url 'customers' %}">Customers</a>
                             <a class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}" href="{% url 'products' %}">Products</a>
                             <a class="nav-link {% if request.resolver_match.url_name == 'category' %}active{% endif %}" href="{% url 'category' %}">Category</a>
-                            {% comment %} <a class="nav-link {% if request.resolver_match.url_name == 'adminOrders' %}active{% endif %}" href="{% url 'adminOrders' %}">Orders</a>
-                            <a class="nav-link {% if request.resolver_match.url_name == 'adminCoupons'%} active {% endif %}" href="{% url 'adminCoupons' %}">Coupons</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_orders' %}active{% endif %}" href="{% url 'admin_orders' %}">Orders</a>
+                            {% comment %} <a class="nav-link {% if request.resolver_match.url_name == 'adminCoupons'%} active {% endif %}" href="{% url 'adminCoupons' %}">Coupons</a>
                             <a class="nav-link {% if request.resolver_match.url_name == 'adminOffers' %}active{% endif %}" href="{% url 'adminOffers' %}">Offers</a>
                             <a class="nav-link {% if request.resolver_match.url_name == 'manage_requests' %}active{% endif %}" href="{% url 'manage_requests' %}">Requests</a>
-                        </nav> {% endcomment %}
+                        </nav>  {% endcomment %}
                     </div>
                 </div>
     

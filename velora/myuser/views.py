@@ -14,6 +14,8 @@ from django.http import JsonResponse
 from django.contrib.auth.forms import PasswordChangeForm
 from django.db import transaction
 from django.contrib.auth import update_session_auth_hash
+from django.db.models import Q, Avg, Count
+
 
 User = get_user_model()
 
@@ -138,16 +140,19 @@ def resend_otp(request):
 @never_cache
 @login_required(login_url='userlogin')
 def product_list(request):
+    # Base queryset with active products
     products = Products.objects.filter(is_active=True)
     categories = Category.objects.all()
+
+    # Calculate discounts and percentages
     for product in products:
         original_price = product.original_price
-        current_price = product.price  
+        current_price = product.price
         
         if original_price and isinstance(original_price, Decimal) and original_price > current_price:
             discount = original_price - current_price
             discount_percentage = (discount / original_price) * Decimal('100')
-            product.discount_price = discount  
+            product.discount_price = current_price
             product.discount_percentage = round(float(discount_percentage), 2)
         else:
             product.discount_price = Decimal('0')
@@ -159,7 +164,7 @@ def product_list(request):
 
     # Filter by category
     if category_id:
-        if category_id != 'all':  # Add this check for "all" category
+        if category_id != 'all':
             try:
                 selected_category = Category.objects.get(id=category_id)
                 products = products.filter(category=selected_category)
@@ -169,17 +174,52 @@ def product_list(request):
     # Filter by search
     search_query = request.GET.get('search')
     if search_query:
-        products = products.filter(name__icontains=search_query)
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    # Apply sorting
+    sort_by = request.GET.get('sort', 'featured')
+    
+    if sort_by == 'popularity':
+        # Sort by number of times purchased
+        products = products.annotate(
+            order_count=Count('orderitem')
+        ).order_by('-order_count')
+    elif sort_by == 'price_asc':
+        # Sort by current price (considering discount_price if available)
+        products = sorted(products, key=lambda x: x.discount_price if x.discount_price else x.price)
+    elif sort_by == 'price_desc':
+        # Sort by current price in descending order
+        products = sorted(products, key=lambda x: x.discount_price if x.discount_price else x.price, reverse=True)
+    elif sort_by == 'rating':
+        # Sort by average rating
+        products = products.annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-avg_rating')
+    elif sort_by == 'newest':
+        # Sort by creation date
+        products = products.order_by('-created_at')
+    elif sort_by == 'name_asc':
+        # Sort by name A-Z
+        products = products.order_by('name')
+    elif sort_by == 'name_desc':
+        # Sort by name Z-A
+        products = products.order_by('-name')
+    elif sort_by == 'featured':
+        # Show featured products first
+        products = products.order_by('-is_featured', '-created_at')
 
     context = {
         'products': products,
         'categories': categories,
         'selected_category': selected_category,
         'search_query': search_query,
+        'sort_by': sort_by,  # Add this to maintain sort selection in template
     }
+    
     return render(request, 'user/product_list.html', context)
-
-
 @never_cache
 @login_required(login_url='userlogin')
 def product_detail(request, product_id):
@@ -679,7 +719,7 @@ def checkout(request):
         
         # Calculate totals
         subtotal = sum(item.quantity * item.price for item in cart_items)
-        shipping_fee = Decimal('40.00')
+        shipping_fee = Decimal('40.00') if subtotal > Decimal('500.00') else Decimal('0.00')
         total = subtotal + shipping_fee
         
         if request.method == 'POST':

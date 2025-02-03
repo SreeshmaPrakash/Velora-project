@@ -5,10 +5,32 @@
 {% block title %}Products{% endblock %}
 
 {% block content %}
-
 <div class="container">
     <h2 class="main-title">Our Products</h2>
 
+    <!-- Search and Filter Section -->
+    <div class="search-filter-section">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search products..." 
+                   value="{{ request.GET.search|default:'' }}">
+            <button id="searchButton">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <div class="sort-options">
+            <select class="sort-select" id="sortSelect">
+                <option value="featured" {% if sort_by == 'featured' %}selected{% endif %}>Featured</option>
+                <option value="popularity" {% if sort_by == 'popularity' %}selected{% endif %}>Most Popular</option>
+                <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                <option value="rating" {% if sort_by == 'rating' %}selected{% endif %}>Average Rating</option>
+                <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>New Arrivals</option>
+                <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>Name: A to Z</option>
+                <option value="name_desc" {% if sort_by == 'name_desc' %}selected{% endif %}>Name: Z to A</option>
+            </select>
+        </div>
+    </div>
 
     <!-- Category Filter -->
     <div class="category-filter">
@@ -23,19 +45,7 @@
         </a>
         {% endfor %}
     </div>
-    
-    <!-- Filter and Sort Options -->
-    <div class="filter-section">
-        <div class="sort-options">
-            <select class="sort-select">
-                <option value="popular">Most Popular</option>
-                <option value="newest">Newest First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-            </select>
-        </div>
-    </div>
-    
+
     <!-- Products Grid -->
     <div class="products-grid">
         {% for product in products %}
@@ -69,11 +79,10 @@
                 <div class="product-info">
                     <h3 class="product-title">{{ product.name }}</h3>
                     
-                    <!-- Rating Stars -->
                     <div class="product-rating">
                         <div class="stars">
-                            {% for i in 5|make_list %}
-                            {% if forloop.counter <= product.rating %}
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= product.rating %}
                                     <i class="fas fa-star"></i>
                                 {% elif forloop.counter <= product.rating|add:"0.5" %}
                                     <i class="fas fa-star-half-alt"></i>
@@ -85,18 +94,17 @@
                         </div>
                     </div>
 
-                    <!-- Price Section -->
                     <div class="price-section">
                         <div class="price-details">
-                            <span class="current-price">₹{{ product.discount_price|default:product.price }}</span>
-{% if product.discount_price %}
-    <span class="original-price">₹{{ product.price }}</span>
-{% endif %}
-
+                            {% if product.discount_price %}
+                                <span class="current-price">₹{{ product.discount_price }}</span>
+                                <span class="original-price">₹{{ product.price }}</span>
+                            {% else %}
+                                <span class="current-price">₹{{ product.price }}</span>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Product Features -->
                     <div class="product-features">
                         {% if product.stock > 0 %}
                             <span class="feature-badge in-stock">
@@ -108,12 +116,11 @@
                             </span>
                         {% endif %}
                         
-                        {% if product.price >= 100 %}
-                            <span href="" class="feature-badge free-delivery">
+                        {% if product.price >= 500 %}
+                            <span class="feature-badge free-delivery">
                                 <i class="fas fa-truck"></i> Free Delivery
                             </span>
                         {% endif %}
-
                     </div>
                 </div>
             </a>
@@ -134,8 +141,8 @@
         {% endfor %}
     </div>
 </div>
-<style>
 
+<style>
     .notification {
         position: fixed;
         top: 20px;
@@ -480,71 +487,147 @@
             font-size: 1.5rem;
         }
     }
-    </style>
     
-    <script>
-        const categoryButtons = document.querySelectorAll('.category-btn');
+    .search-filter-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 20px;
+    }
 
-        document.addEventListener('DOMContentLoaded', function() {
-             // Category button click handler
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active state
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
+    .search-box {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        max-width: 400px;
+    }
 
-            // Fetch products
-            const categoryId = this.dataset.category;
-            fetchProducts(categoryId === 'all' ? '' : categoryId);
-        });
+    .search-box input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px 0 0 4px;
+        font-size: 0.9rem;
+    }
+
+    .search-box button {
+        padding: 8px 16px;
+        background: #800080;
+        color: white;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+    }
+
+    .search-box button:hover {
+        background: #660066;
+    }
+
+    /* Updated price styles */
+    .price-details {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .current-price {
+        font-size: 1.2rem;
+        color: #800080;
+        font-weight: bold;
+    }
+
+    .original-price {
+        color: #666;
+        text-decoration: line-through;
+        font-size: 0.9rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .search-filter-section {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            max-width: none;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    const sortSelect = document.getElementById('sortSelect');
+    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+
+    // Search functionality
+    function performSearch() {
+        const params = new URLSearchParams(window.location.search);
+        const searchValue = searchInput.value.trim();
+        
+        if (searchValue) {
+            params.set('search', searchValue);
+        } else {
+            params.delete('search');
+        }
+        
+        window.location.search = params.toString();
+    }
+
+    searchButton.addEventListener('click', performSearch);
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
     });
 
-
-    document.querySelector('.sort-select').addEventListener('change', function() {
+    // Sort functionality
+    sortSelect.addEventListener('change', function() {
         const params = new URLSearchParams(window.location.search);
         params.set('sort', this.value);
         window.location.search = params.toString();
-    });   
+    });
 
-    document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners to all add to cart buttons
-    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
-    console.log('Found add to cart buttons:', addToCartButtons.length); // Debug log
-    
+    // Add to cart functionality
     addToCartButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('Button clicked!'); // Debug log
             
+            if (this.disabled) return;
+
             const productId = this.getAttribute('data-product-id');
-            console.log('Product ID:', productId); // Debug log
+            const csrfToken = getCookie('csrftoken');
             
             // Disable button and show loading state
             this.disabled = true;
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-            
-            fetch(`/add_to_cart/${productId}/`, {
+
+            fetch('/add_to_cart/', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': getCsrfToken(), 
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ quantity: 1 })
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: 1
+                })
             })
-            .then(response => {
-                console.log('Response received:', response.status); // Debug log
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Data received:', data); // Debug log
                 if (data.status === 'success') {
                     showNotification('Added to cart!', 'success');
                     // Update cart count if available
-                    const cartCount = document.querySelector('.cart-count');
-                    if (cartCount && data.cart_count) {
-                        cartCount.textContent = data.cart_count;
+                    if (data.cart_count !== undefined) {
+                        const cartCount = document.querySelector('.cart-count');
+                        if (cartCount) {
+                            cartCount.textContent = data.cart_count;
+                        }
                     }
                 } else {
                     showNotification(data.message || 'Error adding to cart', 'error');
@@ -555,7 +638,7 @@
                 showNotification('Error adding to cart', 'error');
             })
             .finally(() => {
-                // Re-enable button and restore text
+                // Re-enable button and restore original text
                 this.disabled = false;
                 this.innerHTML = originalText;
             });
@@ -563,7 +646,7 @@
     });
 });
 
-// Get CSRF token
+// CSRF token helper
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -579,12 +662,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
+// Notification helper
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
     document.body.appendChild(notification);
 
+    // Fade out and remove after delay
     setTimeout(() => {
         notification.style.opacity = '0';
         setTimeout(() => {
@@ -592,8 +677,5 @@ function showNotification(message, type) {
         }, 300);
     }, 3000);
 }
-    </script>
-    
-    <!-- Add Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    {% endblock %}
+</script>
+{% endblock %}

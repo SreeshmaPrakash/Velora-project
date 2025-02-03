@@ -25,7 +25,6 @@ urlpatterns = [
     path('profile/orders/', views.my_orders, name='my_orders'),
     # path('profile/wallet/', views.wallet, name='wallet'),
     # path('profile/coupons/', views.coupons, name='coupons'),
-    # path('profile/change-password/', views.change_password, name='change_password'),
 
 
     path('cart/', views.view_cart, name='view_cart'),
