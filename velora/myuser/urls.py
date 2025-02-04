@@ -9,6 +9,12 @@ urlpatterns = [
     path('signup/', views.usersignup, name='usersignup'),
     path('verify_signup_otp/', views.verify_signup_otp, name='verify_signup_otp'),
     path('resend-otp/', views.resend_otp, name='resend_otp'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('verify-otp/', views.verify_otp, name='verify_otp'),
+    path('reset-password/', views.reset_password, name='reset_password'),
+    path('resend_pass_otp/', views.resend_pass_otp, name='resend_pass_otp'),
+
+
     
     path('products/', views.product_list, name='product_list'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),

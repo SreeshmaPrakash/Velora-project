@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from PIL import Image
 from decimal import Decimal
 from django.utils import timezone  
-
+import random
 
 
 class Customer(models.Model):
@@ -15,6 +15,21 @@ class Customer(models.Model):
     pincode = models.CharField(max_length=6, blank=True, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    @staticmethod
+    def generate_otp():
+        return str(random.randint(1000, 9999))
+    
+    def is_valid(self):
+        now = timezone.now()
+        time_diff = now - self.created_at
+        return not self.is_used and time_diff.total_seconds() <= 30
 
 class Wallet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wallet')

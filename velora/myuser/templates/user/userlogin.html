@@ -268,7 +268,7 @@
                         {% endfor %}
                     </div>
                     {% endif %}
-                    <a href="" class="forgot-password">forgot password?</a>
+                    <a href="{% url 'forgot_password' %}" class="forgot-password">forgot password?</a>
                 </div>
 
                 {% if form.non_field_errors %}
